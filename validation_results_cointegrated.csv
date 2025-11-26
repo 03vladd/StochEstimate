@@ -1,0 +1,3 @@
+Pair,Cointegrated,Hedge Ratio,Observations,Tests Passed,Confidence,Stationarity,Drift,Volatility,ACF
+JPMorgan vs Goldman Sachs,✓,0.3400,502,2,LOW,✓,✗,✗,✓
+Amazon vs Walmart,✓,1.2365,502,3,MEDIUM,✓,✓,✗,✓

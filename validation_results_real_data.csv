@@ -1,0 +1,9 @@
+Pair,Observations,Tests Passed,Confidence,Stationarity,Drift,Volatility,ACF
+Microsoft vs Apple,502,2,NOT_OU,✗,✓,✗,✓
+JPMorgan vs Goldman Sachs,502,2,LOW,✓,✗,✗,✓
+JPMorgan vs Bank of America,502,1,NOT_OU,✗,✗,✗,✓
+ExxonMobil vs Chevron,502,2,NOT_OU,✗,✓,✗,✓
+Amazon vs Walmart,502,2,LOW,✓,✗,✗,✓
+NextEra vs Duke Energy,502,2,NOT_OU,✗,✗,✓,✓
+Johnson & Johnson vs Pfizer,502,1,NOT_OU,✗,✗,✗,✓
+Nvidia vs AMD,502,0,NOT_OU,✗,✗,✗,✗
