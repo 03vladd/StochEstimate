@@ -4,54 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e4df545b-d3b0-4e50-9afb-a0d4d8f020af" name="Changes" comment="Sample OU Process Generator.">
-      <change afterPath="$PROJECT_DIR$/.idea/StochEstimate.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/cointegrated_pairs_comparison.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/diagnostic_Amazon_Walmart.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/diagnostic_ou_strong.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/diagnostic_ou_very_weak.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/diagnostic_ou_weak.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/diagnostic_random_walk.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/estimation/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/estimation/adaptive_exit_strategy.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/estimation/backtesting.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/estimation/backtesting_adapted.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/estimation/mle.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mle_results_detailed_20251126_162149.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mle_results_summary_20251126_162149.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ou_analysis_detailed_20251126_163533.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ou_analysis_summary_20251126_163533.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pipeline.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocessing/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocessing/engle_granger_cointegration.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocessing/validate_real_pairs.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/real_pairs_comparison.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/run_validation_framework.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/synthetic_data/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/synthetic_data/ou_generator.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_adaptive.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation/acf_exponential.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation/constant_volatility.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation/linear_drift_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation/normality_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation/stationarity_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation/validation_framework.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation_comparison.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation_results_cointegrated.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/validation_results_real_data.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visualization/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visualization/validation_visualization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ou_generator.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/stationarity_test.py" beforeDir="false" />
+    <list default="true" id="e4df545b-d3b0-4e50-9afb-a0d4d8f020af" name="Changes" comment="Added everything to the repo.">
+      <change afterPath="$PROJECT_DIR$/database/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/database/db_manager.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ou_analysis_detailed_20251204_144942.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ou_analysis_summary_20251204_144942.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/preprocessing/cointegrated_pairs_comparison.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/preprocessing/diagnostic_Amazon_Walmart.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/preprocessing/validation_results_cointegrated.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test_db_connection.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test_db_manager.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test_db_operations.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/pipeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocessing/validate_real_pairs.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocessing/validate_real_pairs.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -68,9 +35,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 7
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
   <component name="ProjectId" id="35yKyPfIUPHSoLjyv9HU6Cymh08" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
@@ -82,10 +49,14 @@
     "Python.pipeline.executor": "Run",
     "Python.run_validation_framework.executor": "Run",
     "Python.test_adaptive.executor": "Run",
+    "Python.test_db_connection.executor": "Run",
+    "Python.test_db_manager.executor": "Run",
+    "Python.test_db_operations.executor": "Run",
     "Python.validate_real_pairs.executor": "Run",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "master",
+    "last_opened_file_path": "C:/Users/vasiu/UBB/Info/Licenta/StochEstimate",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -94,7 +65,7 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.test_adaptive">
+  <component name="RunManager" selected="Python.pipeline">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="StochEstimate" />
       <option name="ENV_FILES" value="" />
@@ -141,7 +112,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="run_validation_framework" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="test_db_connection" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="StochEstimate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -155,7 +126,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/run_validation_framework.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_db_connection.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -164,7 +135,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="test_adaptive" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="test_db_manager" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="StochEstimate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -178,7 +149,30 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_adaptive.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_db_manager.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_db_operations" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="StochEstimate" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_db_operations.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -196,12 +190,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/preprocessing" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/validate_real_pairs.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/preprocessing/validate_real_pairs.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -212,10 +206,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.test_adaptive" />
         <item itemvalue="Python.pipeline" />
         <item itemvalue="Python.validate_real_pairs" />
-        <item itemvalue="Python.run_validation_framework" />
+        <item itemvalue="Python.test_db_operations" />
+        <item itemvalue="Python.test_db_manager" />
+        <item itemvalue="Python.test_db_connection" />
       </list>
     </recent_temporary>
   </component>
@@ -234,7 +229,10 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1764077124557</updated>
-      <workItem from="1764077134154" duration="13076000" />
+      <workItem from="1764077134154" duration="14683000" />
+      <workItem from="1764323503010" duration="83000" />
+      <workItem from="1764682419333" duration="620000" />
+      <workItem from="1764843916820" duration="4613000" />
     </task>
     <task id="LOCAL-00001" summary="Stationarity Test using Augmented Dickey-Fuller to see if we can classify a series as stationary or not">
       <option name="closed" value="true" />
@@ -252,7 +250,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764080881623</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Added everything to the repo.">
+      <option name="closed" value="true" />
+      <created>1764176690138</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1764176690138</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -261,7 +267,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Stationarity Test using Augmented Dickey-Fuller to see if we can classify a series as stationary or not" />
     <MESSAGE value="Sample OU Process Generator." />
-    <option name="LAST_COMMIT_MESSAGE" value="Sample OU Process Generator." />
+    <MESSAGE value="Added everything to the repo." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added everything to the repo." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -280,9 +287,14 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/docker_compose_yml$test_db_manager.coverage" NAME="test_db_manager Coverage Results" MODIFIED="1764847443249" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/docker_compose_yml$validate_real_pairs.coverage" NAME="validate_real_pairs Coverage Results" MODIFIED="1764848645944" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/preprocessing" />
     <SUITE FILE_PATH="coverage/StochEstimate$test_adaptive.coverage" NAME="test_adaptive Coverage Results" MODIFIED="1764166868893" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/docker_compose_yml$pipeline.coverage" NAME="pipeline Coverage Results" MODIFIED="1764848967366" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/StochEstimate$run_validation_framework.coverage" NAME="run_validation_framework Coverage Results" MODIFIED="1764157720734" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/StochEstimate$pipeline.coverage" NAME="pipeline Coverage Results" MODIFIED="1764164123345" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/StochEstimate$pipeline.coverage" NAME="pipeline Coverage Results" MODIFIED="1764177402918" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/StochEstimate$validate_real_pairs.coverage" NAME="validate_real_pairs Coverage Results" MODIFIED="1764160736893" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/docker_compose_yml$test_db_connection.coverage" NAME="test_db_connection Coverage Results" MODIFIED="1764844289234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/docker_compose_yml$test_db_operations.coverage" NAME="test_db_operations Coverage Results" MODIFIED="1764848158424" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

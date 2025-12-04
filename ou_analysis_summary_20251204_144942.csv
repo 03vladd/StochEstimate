@@ -1,0 +1,2 @@
+Pair,Cointegrated,Hedge Ratio (β),Observations,Validation Tests,Confidence,θ (Reversion Speed),θ CI,μ (Long-term Mean),σ (Volatility),Log-Likelihood,Num Trades,Win Rate,Total P&L,Avg Trade P&L
+Amazon vs Walmart,✓,1.2186,501,3/4,MEDIUM,0.050460,"[0.001000, 0.104044]",-0.000000,3.913091,-919.65,25,92.0%,"$174,337.15","$6,973.49"

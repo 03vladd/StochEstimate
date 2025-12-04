@@ -1,0 +1,2 @@
+Pair,Cointegrated,Hedge Ratio,Observations,Tests Passed,Confidence,Stationarity,Drift,Volatility,ACF
+Amazon vs Walmart,✓,1.2186,501,3,MEDIUM,✓,✓,✗,✓

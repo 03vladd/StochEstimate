@@ -2,6 +2,7 @@
 Complete Pipeline: Cointegration → Validation → MLE Estimation → Backtesting
 
 Orchestrates the full workflow for OU parameter estimation and validation on financial pairs.
+Stores all results in PostgreSQL database.
 """
 
 import pandas as pd
@@ -13,6 +14,46 @@ from validation.validation_framework import validate_series
 from estimation.mle import estimate_ou_mle
 from estimation.backtesting import backtest_pairs_trading
 from preprocessing.validate_real_pairs import FinancialPairsFetcher
+from database.db_manager import DatabaseManager
+
+
+def extract_validation_data(report) -> dict:
+    """
+    Extract all validation test statistics from ValidationReport
+
+    Converts the ValidationReport object into a flat dictionary
+    with all individual test p-values and statistics needed for database storage.
+
+    Args:
+        report: ValidationReport object from validate_series()
+
+    Returns:
+        Dictionary with all test results ready for database insertion
+    """
+    return {
+        'stationarity_passed': bool(report.stationarity.passed),
+        'stationarity_pvalue': float(report.stationarity.p_value),
+        'stationarity_statistic': float(report.stationarity.adf_statistic),
+
+        'drift_passed': bool(report.linear_drift.passed),
+        'drift_pvalue': float(report.linear_drift.p_value),
+        'drift_statistic': float(report.linear_drift.slope),
+
+        'volatility_passed': bool(report.constant_volatility.passed),
+        'volatility_pvalue': float(report.constant_volatility.p_value),
+        'volatility_statistic': float(report.constant_volatility.levene_statistic),
+
+        'autocorr_passed': bool(report.autocorrelation.passed),
+        'autocorr_pvalue': float(report.autocorrelation.r_squared),
+        'autocorr_statistic': float(report.autocorrelation.theta),
+
+        'normality_passed': bool(report.normality.passed),
+        'normality_pvalue': float(report.normality.p_value),
+        'normality_statistic': float(report.normality.shapiro_statistic),
+
+        'confidence_level': str(report.get_confidence_level()[0]),
+        'tests_passed_count': int(report.count_passing_tests())
+    }
 
 
 class OUPipeline:
@@ -27,6 +68,7 @@ class OUPipeline:
             end_date: YYYY-MM-DD (default: today)
         """
         self.fetcher = FinancialPairsFetcher(start_date, end_date)
+        self.db = DatabaseManager()
         self.results = {}
 
     def run_full_pipeline(self, pairs_to_test: list) -> dict:
@@ -42,7 +84,7 @@ class OUPipeline:
 
         print("\n" + "=" * 80)
         print("COMPLETE OU ESTIMATION PIPELINE")
-        print("Cointegration → Validation → MLE Estimation → Backtesting")
+        print("Cointegration → Validation → MLE Estimation → Backtesting → Database Storage")
         print("=" * 80)
 
         # Step 1: Fetch and cointegrate
@@ -56,8 +98,8 @@ class OUPipeline:
 
         print(f"✓ Successfully cointegrated {len(pairs_data)} pairs\n")
 
-        # Step 2: Validate, estimate, and backtest
-        print("2. VALIDATION & MLE ESTIMATION & BACKTESTING")
+        # Step 2: Validate, estimate, backtest, and store
+        print("2. VALIDATION & MLE ESTIMATION & BACKTESTING & DATABASE STORAGE")
         print("-" * 80)
 
         for name, (spread, coint_result, raw) in pairs_data.items():
@@ -74,15 +116,85 @@ class OUPipeline:
             validation_report = validate_series(spread, name=name)
             print(validation_report.summary())
 
+            # Store validation in database
+            print(f"B. STORING IN DATABASE...", end=" ", flush=True)
+
+            # Parse ticker names from pair_name
+            parts = name.split(' vs ')
+            if len(parts) == 2:
+                ticker1, ticker2 = parts[0].strip(), parts[1].strip()
+            else:
+                ticker1, ticker2 = "UNK", "UNK"
+
+            # Insert pair
+            pair_id = self.db.insert_pair(
+                ticker1=ticker1, ticker2=ticker2, pair_name=name, sector=None
+            )
+
+            if pair_id is None:
+                print("✗ Failed to insert pair")
+                continue
+
+            # Insert cointegration results
+            coint_id = self.db.insert_cointegration_result(
+                pair_id=pair_id, interval='1d',
+                hedge_ratio=float(coint_result['hedge_ratio']),
+                intercept=float(coint_result['intercept']),
+                adf_statistic=float(coint_result['adf_statistic']),
+                adf_pvalue=float(coint_result['adf_pvalue']),
+                cointegrated=bool(coint_result['cointegrated']),
+                observations_used=int(validation_report.n_observations)
+            )
+
+            if coint_id is None:
+                print("✗ Failed to insert cointegration results")
+                continue
+
+            # Insert validation results
+            val_data = extract_validation_data(validation_report)
+            val_id = self.db.insert_validation_result(
+                pair_id=pair_id, interval='1d', coint_id=coint_id,
+                stationarity_passed=val_data['stationarity_passed'],
+                stationarity_pvalue=val_data['stationarity_pvalue'],
+                stationarity_statistic=val_data['stationarity_statistic'],
+                drift_passed=val_data['drift_passed'],
+                drift_pvalue=val_data['drift_pvalue'],
+                drift_statistic=val_data['drift_statistic'],
+                volatility_passed=val_data['volatility_passed'],
+                volatility_pvalue=val_data['volatility_pvalue'],
+                volatility_statistic=val_data['volatility_statistic'],
+                autocorr_passed=val_data['autocorr_passed'],
+                autocorr_pvalue=val_data['autocorr_pvalue'],
+                autocorr_statistic=val_data['autocorr_statistic'],
+                normality_passed=val_data['normality_passed'],
+                normality_pvalue=val_data['normality_pvalue'],
+                normality_statistic=val_data['normality_statistic'],
+                confidence_level=val_data['confidence_level'],
+                tests_passed_count=val_data['tests_passed_count']
+            )
+
+            if val_id is None:
+                print("✗ Failed to insert validation results")
+                continue
+
+            # Insert price data
+            for timestamp, close_price in spread.items():
+                self.db.insert_price_data(
+                    pair_id=pair_id, interval='1d',
+                    timestamp=str(timestamp), close=float(close_price)
+                )
+
+            print("✓")
+
             # Run MLE estimation
-            print(f"B. MLE PARAMETER ESTIMATION")
+            print(f"C. MLE PARAMETER ESTIMATION")
             print(f"   Running optimization on {len(spread)} observations...")
 
             mle_result = estimate_ou_mle(spread, verbose=True)
             print(mle_result.detailed_result)
 
             # Run backtesting
-            print(f"\nC. BACKTESTING")
+            print(f"\nD. BACKTESTING")
             print(f"   Running backtest with MLE parameters...")
 
             backtest_result = backtest_pairs_trading(
@@ -103,7 +215,8 @@ class OUPipeline:
                 'mle': mle_result,
                 'backtest': backtest_result,
                 'raw_data': raw,
-                'spread': spread
+                'spread': spread,
+                'pair_id': pair_id
             }
 
         return self.results
@@ -289,6 +402,9 @@ def main():
     print("\n" + "=" * 80)
     print("PIPELINE COMPLETE")
     print("=" * 80)
+
+    # Close database connection
+    pipeline.db.close_pool()
 
 
 if __name__ == "__main__":
