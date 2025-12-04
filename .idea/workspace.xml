@@ -4,21 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e4df545b-d3b0-4e50-9afb-a0d4d8f020af" name="Changes" comment="Added everything to the repo.">
-      <change afterPath="$PROJECT_DIR$/database/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/database/db_manager.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ou_analysis_detailed_20251204_144942.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ou_analysis_summary_20251204_144942.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocessing/cointegrated_pairs_comparison.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocessing/diagnostic_Amazon_Walmart.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocessing/validation_results_cointegrated.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_db_connection.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_db_manager.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_db_operations.py" afterDir="false" />
+    <list default="true" id="e4df545b-d3b0-4e50-9afb-a0d4d8f020af" name="Changes" comment="Integrated a database to store data.">
+      <change afterPath="$PROJECT_DIR$/phase2_detailed_20251204_153508.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/phase2_summary_20251204_153508.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pipeline_analysis.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/pipeline.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocessing/validate_real_pairs.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocessing/validate_real_pairs.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,18 +26,25 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
 }</component>
   <component name="ProjectId" id="35yKyPfIUPHSoLjyv9HU6Cymh08" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
     "Python.pipeline.executor": "Run",
+    "Python.pipeline_analysis.executor": "Run",
     "Python.run_validation_framework.executor": "Run",
     "Python.test_adaptive.executor": "Run",
     "Python.test_db_connection.executor": "Run",
@@ -65,7 +63,7 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.pipeline">
+  <component name="RunManager" selected="Python.pipeline_analysis">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="StochEstimate" />
       <option name="ENV_FILES" value="" />
@@ -112,7 +110,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="test_db_connection" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="pipeline_analysis" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="StochEstimate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -126,7 +124,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/test_db_connection.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pipeline_analysis.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -206,11 +204,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.pipeline_analysis" />
         <item itemvalue="Python.pipeline" />
         <item itemvalue="Python.validate_real_pairs" />
         <item itemvalue="Python.test_db_operations" />
         <item itemvalue="Python.test_db_manager" />
-        <item itemvalue="Python.test_db_connection" />
       </list>
     </recent_temporary>
   </component>
@@ -232,7 +230,7 @@
       <workItem from="1764077134154" duration="14683000" />
       <workItem from="1764323503010" duration="83000" />
       <workItem from="1764682419333" duration="620000" />
-      <workItem from="1764843916820" duration="4613000" />
+      <workItem from="1764843916820" duration="6015000" />
     </task>
     <task id="LOCAL-00001" summary="Stationarity Test using Augmented Dickey-Fuller to see if we can classify a series as stationary or not">
       <option name="closed" value="true" />
@@ -258,17 +256,38 @@
       <option name="project" value="LOCAL" />
       <updated>1764176690138</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Integrated a database to store data.">
+      <option name="closed" value="true" />
+      <created>1764850707018</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1764850707018</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="Stationarity Test using Augmented Dickey-Fuller to see if we can classify a series as stationary or not" />
     <MESSAGE value="Sample OU Process Generator." />
     <MESSAGE value="Added everything to the repo." />
-    <option name="LAST_COMMIT_MESSAGE" value="Added everything to the repo." />
+    <MESSAGE value="Integrated a database to store data." />
+    <option name="LAST_COMMIT_MESSAGE" value="Integrated a database to store data." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -290,9 +309,10 @@
     <SUITE FILE_PATH="coverage/docker_compose_yml$test_db_manager.coverage" NAME="test_db_manager Coverage Results" MODIFIED="1764847443249" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/docker_compose_yml$validate_real_pairs.coverage" NAME="validate_real_pairs Coverage Results" MODIFIED="1764848645944" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/preprocessing" />
     <SUITE FILE_PATH="coverage/StochEstimate$test_adaptive.coverage" NAME="test_adaptive Coverage Results" MODIFIED="1764166868893" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/docker_compose_yml$pipeline.coverage" NAME="pipeline Coverage Results" MODIFIED="1764848967366" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/docker_compose_yml$pipeline.coverage" NAME="pipeline Coverage Results" MODIFIED="1764851499660" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/StochEstimate$run_validation_framework.coverage" NAME="run_validation_framework Coverage Results" MODIFIED="1764157720734" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/StochEstimate$pipeline.coverage" NAME="pipeline Coverage Results" MODIFIED="1764177402918" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/docker_compose_yml$pipeline_analysis.coverage" NAME="pipeline_analysis Coverage Results" MODIFIED="1764851877784" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/StochEstimate$validate_real_pairs.coverage" NAME="validate_real_pairs Coverage Results" MODIFIED="1764160736893" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/docker_compose_yml$test_db_connection.coverage" NAME="test_db_connection Coverage Results" MODIFIED="1764844289234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/docker_compose_yml$test_db_operations.coverage" NAME="test_db_operations Coverage Results" MODIFIED="1764848158424" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
