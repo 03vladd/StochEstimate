@@ -48,6 +48,43 @@ def generate_ou_process(
     return pd.Series(X, index=pd.date_range(start='2020-01-01', periods=n_steps, freq='D'))
 
 
+def add_jump_contamination(
+        series: pd.Series,
+        jump_rate: float,
+        jump_scale: float = 5.0,
+        seed: int = None
+) -> pd.Series:
+    """
+    Contaminate an OU series with jump outliers.
+
+    Replaces a random fraction of observations with spikes drawn from
+    N(0, jump_scale * sigma), where sigma is estimated from the series.
+    This tests estimator robustness to heavy-tailed / non-Gaussian noise.
+
+    Args:
+        series:     Input OU time series
+        jump_rate:  Fraction of points to replace with jumps (e.g., 0.05 = 5%)
+        jump_scale: Jump size relative to series std dev (default: 5.0)
+        seed:       Random seed for reproducibility
+
+    Returns:
+        Contaminated pd.Series (same index as input)
+    """
+    rng = np.random.default_rng(seed)
+    values = series.values.copy().astype(float)
+    n = len(values)
+
+    sigma_est = np.std(values)
+    n_jumps = int(np.round(jump_rate * n))
+
+    if n_jumps > 0:
+        jump_indices = rng.choice(n, size=n_jumps, replace=False)
+        jump_magnitudes = rng.normal(0, jump_scale * sigma_est, size=n_jumps)
+        values[jump_indices] = jump_magnitudes
+
+    return pd.Series(values, index=series.index)
+
+
 def generate_random_walk(
         n_steps: int = 1000,
         drift: float = 0.0,
