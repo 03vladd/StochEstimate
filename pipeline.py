@@ -21,6 +21,7 @@ from estimation.mle import estimate_ou_mle
 from estimation.backtesting import backtest_pairs_trading
 from preprocessing.validate_real_pairs import FinancialPairsFetcher
 from database.db_manager import DatabaseManager
+from estimation.lstm_estimator import OULSTMEstimator
 
 
 def extract_validation_data(report) -> dict:
@@ -59,13 +60,25 @@ def extract_validation_data(report) -> dict:
 class HybridPipeline:
     """Brute force discovery + full analysis on winners"""
 
-    def __init__(self, start_date: str = None, end_date: str = None):
+    def __init__(self, start_date: str = None, end_date: str = None,
+                 lstm_model_path: str = None):
         """Initialize pipeline"""
         self.fetcher = FinancialPairsFetcher(start_date, end_date)
         self.db = DatabaseManager()
         self.discovery_results = {}  # Pairs that cointegrate (Phase 1)
         self.analysis_results = {}   # Full analysis on winners (Phase 2)
         self.cointegrated_pairs = [] # List of (ticker1, ticker2, name) for Phase 2
+
+        # Optional LSTM estimator for comparison with MLE
+        self.lstm_estimator = None
+        if lstm_model_path is not None:
+            try:
+                self.lstm_estimator = OULSTMEstimator()
+                self.lstm_estimator.load(lstm_model_path)
+                print(f"✓ LSTM estimator loaded from {lstm_model_path}")
+            except Exception as e:
+                print(f"⚠ Could not load LSTM model: {e}")
+                self.lstm_estimator = None
 
     def check_if_pair_cached(self, ticker1: str, ticker2: str) -> Optional[Dict]:
         """Check if pair already exists in database"""
@@ -262,6 +275,18 @@ class HybridPipeline:
                 mle_result = estimate_ou_mle(estimation_spread, verbose=True)
                 print(mle_result.detailed_result)
 
+                # B2. LSTM Estimation (if model loaded)
+                lstm_result = None
+                if self.lstm_estimator is not None:
+                    print(f"\nB2. LSTM PARAMETER ESTIMATION")
+                    try:
+                        lstm_result = self.lstm_estimator.estimate(estimation_spread, n_mc_samples=200)
+                        print(lstm_result.detailed_result)
+                        self._print_estimation_comparison(name, mle_result, lstm_result)
+                    except Exception as e:
+                        print(f"   ⚠ LSTM estimation failed: {e}")
+                        lstm_result = None
+
                 # C. Backtesting on held-out test set (last 30%) only
                 print(f"\nC. BACKTESTING")
                 print(f"   Running out-of-sample backtest on {n_total - split_idx} observations...")
@@ -282,6 +307,7 @@ class HybridPipeline:
                     'cointegration': coint_result,
                     'validation': validation_report,
                     'mle': mle_result,
+                    'lstm': lstm_result,
                     'backtest': backtest_result,
                     'raw_data': raw,
                     'spread': spread
@@ -290,6 +316,40 @@ class HybridPipeline:
             except Exception as e:
                 print(f"✗ Analysis failed: {str(e)}")
                 continue
+
+    def _print_estimation_comparison(self, pair_name: str, mle_result, lstm_result):
+        """Print side-by-side comparison table of MLE vs LSTM estimates"""
+        sep = "\u2500" * 100
+        mle_half = f"{1 / mle_result.theta:.1f}" if mle_result.theta > 0 else "N/A"
+        lstm_half = f"{0.693147 / lstm_result.theta:.1f}" if lstm_result.theta > 0 else "N/A"
+
+        print(f"\nPARAMETER ESTIMATION COMPARISON: {pair_name}")
+        print(sep)
+        header = (
+            f"{'Parameter':<14}  {'MLE Estimate':>14}  {'MLE 95% CI':>22}"
+            f"  {'LSTM Estimate':>14}  {'LSTM 95% CI':>22}  {'Δ (abs)':>8}"
+        )
+        print(header)
+        print(sep)
+
+        def row(label, mle_val, mle_ci, lstm_val, lstm_ci):
+            ci_mle = f"[{mle_ci[0]:.6f}, {mle_ci[1]:.6f}]"
+            ci_lstm = f"[{lstm_ci[0]:.6f}, {lstm_ci[1]:.6f}]"
+            delta = abs(mle_val - lstm_val)
+            return (
+                f"{label:<14}  {mle_val:>14.6f}  {ci_mle:>22}"
+                f"  {lstm_val:>14.6f}  {ci_lstm:>22}  {delta:>8.6f}"
+            )
+
+        print(row("θ (speed)", mle_result.theta, mle_result.theta_ci,
+                  lstm_result.theta, lstm_result.theta_ci))
+        print(row("μ (mean)", mle_result.mu, mle_result.mu_ci,
+                  lstm_result.mu, lstm_result.mu_ci))
+        print(row("σ (vol)", mle_result.sigma, mle_result.sigma_ci,
+                  lstm_result.sigma, lstm_result.sigma_ci))
+        print(f"{'Half-life':<14}  {mle_half:>14} days"
+              f"{'':>22}  {lstm_half:>14} days")
+        print(sep)
 
     def create_summary_table(self) -> pd.DataFrame:
         """Create comprehensive summary table of all analyzed pairs"""
@@ -300,6 +360,7 @@ class HybridPipeline:
             val = result_dict['validation']
             mle = result_dict['mle']
             bt = result_dict['backtest']
+            lstm = result_dict.get('lstm')
 
             confidence_level, _ = val.get_confidence_level()
 
@@ -310,11 +371,20 @@ class HybridPipeline:
                 'Observations': val.n_observations,
                 'Validation Tests': f"{val.count_passing_tests()}/4",
                 'Confidence': confidence_level,
-                'θ (Reversion Speed)': f"{mle.theta:.6f}",
-                'θ CI': f"[{mle.theta_ci[0]:.6f}, {mle.theta_ci[1]:.6f}]",
-                'μ (Long-term Mean)': f"{mle.mu:.6f}",
-                'σ (Volatility)': f"{mle.sigma:.6f}",
+                # MLE columns
+                'MLE θ': f"{mle.theta:.6f}",
+                'MLE θ CI': f"[{mle.theta_ci[0]:.6f}, {mle.theta_ci[1]:.6f}]",
+                'MLE μ': f"{mle.mu:.6f}",
+                'MLE σ': f"{mle.sigma:.6f}",
                 'Log-Likelihood': f"{mle.log_likelihood:.2f}",
+                # LSTM columns (populated only if model was loaded)
+                'LSTM θ': f"{lstm.theta:.6f}" if lstm else "N/A",
+                'LSTM θ CI': f"[{lstm.theta_ci[0]:.6f}, {lstm.theta_ci[1]:.6f}]" if lstm else "N/A",
+                'LSTM μ': f"{lstm.mu:.6f}" if lstm else "N/A",
+                'LSTM σ': f"{lstm.sigma:.6f}" if lstm else "N/A",
+                'Δ θ': f"{abs(mle.theta - lstm.theta):.6f}" if lstm else "N/A",
+                'Δ σ': f"{abs(mle.sigma - lstm.sigma):.6f}" if lstm else "N/A",
+                # Backtest columns
                 'Num Trades': bt.num_trades,
                 'Win Rate': f"{bt.win_rate:.1f}%",
                 'Total P&L': f"${bt.total_profit:,.2f}",
@@ -389,17 +459,28 @@ class HybridPipeline:
                 coint = result_dict['cointegration']
                 bt = result_dict['backtest']
 
+                lstm = result_dict.get('lstm')
                 detailed_rows.append({
                     'Pair': name,
                     'Hedge_Ratio': coint['hedge_ratio'],
                     'Validation_Tests': val.count_passing_tests(),
                     'Confidence': val.get_confidence_level()[0],
-                    'Theta': mle.theta,
-                    'Theta_CI_Lower': mle.theta_ci[0],
-                    'Theta_CI_Upper': mle.theta_ci[1],
-                    'Mu': mle.mu,
-                    'Sigma': mle.sigma,
+                    # MLE
+                    'MLE_Theta': mle.theta,
+                    'MLE_Theta_CI_Lower': mle.theta_ci[0],
+                    'MLE_Theta_CI_Upper': mle.theta_ci[1],
+                    'MLE_Mu': mle.mu,
+                    'MLE_Sigma': mle.sigma,
                     'Log_Likelihood': mle.log_likelihood,
+                    # LSTM
+                    'LSTM_Theta': lstm.theta if lstm else None,
+                    'LSTM_Theta_CI_Lower': lstm.theta_ci[0] if lstm else None,
+                    'LSTM_Theta_CI_Upper': lstm.theta_ci[1] if lstm else None,
+                    'LSTM_Mu': lstm.mu if lstm else None,
+                    'LSTM_Sigma': lstm.sigma if lstm else None,
+                    'Delta_Theta': abs(mle.theta - lstm.theta) if lstm else None,
+                    'Delta_Sigma': abs(mle.sigma - lstm.sigma) if lstm else None,
+                    # Backtest
                     'Backtest_Num_Trades': bt.num_trades,
                     'Backtest_Win_Rate': bt.win_rate,
                     'Backtest_Total_PnL': bt.total_profit,

@@ -308,6 +308,39 @@ class DatabaseManager:
         params = (pair_id, interval, timestamp, close, open, high, low, volume)
         return self.execute_insert(query, params)
 
+    def insert_lstm_model(self, interval: str, validation_criteria: str,
+                          model_filename: str, training_pairs_count: int,
+                          training_data_points_used: int, mae_theta: float,
+                          rmse_theta: float, version: int) -> Optional[int]:
+        """
+        Insert LSTM model metadata into the lstm_models table.
+
+        Args:
+            interval: Time interval the model was trained for (e.g., '1d')
+            validation_criteria: Description of training data (e.g., 'synthetic_ou')
+            model_filename: Filename of the saved model (e.g., 'ou_lstm_v1.pt')
+            training_pairs_count: Number of real pairs used during training (0 if synthetic only)
+            training_data_points_used: Total data points used for training
+            mae_theta: Mean Absolute Error on θ from test-set evaluation
+            rmse_theta: Root Mean Square Error on θ from test-set evaluation
+            version: Model version number
+
+        Returns:
+            The model_id if successful, None otherwise
+        """
+        query = """
+            INSERT INTO lstm_models
+            (interval, validation_criteria, model_filename,
+             training_pairs_count, training_data_points_used,
+             mae_validation_loss, rmse_validation_loss, version)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING model_id
+        """
+        params = (interval, validation_criteria, model_filename,
+                  training_pairs_count, training_data_points_used,
+                  mae_theta, rmse_theta, version)
+        return self.execute_insert(query, params)
+
     def get_validation_results(self, pair_id: int = None, interval: str = None,
                                confidence_level: str = None) -> List[Dict]:
         """
