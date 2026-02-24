@@ -165,13 +165,13 @@ class OULSTMEstimator:
             log_theta_min = np.log(theta_range[0])
             log_theta_max = np.log(theta_range[1])
             theta = np.exp(rng.uniform(log_theta_min, log_theta_max))
-            mu = rng.uniform(-2.0, 2.0)   # Random mean so model generalises via de-normalisation
+            mu = 0.0   # Always 0: window normalisation makes mu identically distributed regardless of true mean
             sigma = rng.uniform(sigma_range[0], sigma_range[1])
 
             # Generate OU path
             path = generate_ou_process(
                 mu=mu, theta=theta, sigma=sigma,
-                n_steps=path_length, dt=1.0, initial_value=mu,
+                n_steps=path_length, dt=1.0, initial_value=0.0,
                 seed=None
             ).values
 

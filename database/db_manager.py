@@ -334,6 +334,13 @@ class DatabaseManager:
              training_pairs_count, training_data_points_used,
              mae_validation_loss, rmse_validation_loss, version)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (interval, validation_criteria, version)
+            DO UPDATE SET
+                model_filename            = EXCLUDED.model_filename,
+                training_data_points_used = EXCLUDED.training_data_points_used,
+                mae_validation_loss       = EXCLUDED.mae_validation_loss,
+                rmse_validation_loss      = EXCLUDED.rmse_validation_loss,
+                created_at                = CURRENT_TIMESTAMP
             RETURNING model_id
         """
         params = (interval, validation_criteria, model_filename,
