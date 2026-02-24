@@ -1,0 +1,5 @@
+Pair,Cointegrated,Hedge Ratio (β),Observations,Validation Tests,Confidence,θ (Reversion Speed),θ CI,μ (Long-term Mean),σ (Volatility),Log-Likelihood,Num Trades,Win Rate,Total P&L,Avg Trade P&L
+Morgan Stanley vs Goldman Sachs,✓,0.1872,501,4/4,HIGH,0.034383,"[0.001000, 0.076233]",0.000000,1.024096,-253.36,22,90.9%,"$142,031.60","$6,455.98"
+EOG Resources vs Schlumberger,✓,0.3590,501,3/4,MEDIUM,0.030931,"[0.001000, 0.072279]",-0.000000,1.724933,-514.90,23,82.6%,"$127,302.89","$5,534.91"
+Amazon vs Walmart,✓,1.2186,501,3/4,MEDIUM,0.050460,"[0.001000, 0.104044]",-0.000000,3.913091,-919.65,25,92.0%,"$174,337.16","$6,973.49"
+Exelon vs American Electric Power,✓,0.3271,501,3/4,MEDIUM,0.027938,"[0.001293, 0.054583]",0.000000,0.358794,269.46,22,77.3%,"$107,548.40","$4,888.56"

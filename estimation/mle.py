@@ -162,26 +162,27 @@ def estimate_ou_mle(
     # This is approximate but practical
     eps = 1e-5
 
-    def hessian_element(params, i, j, f=neg_log_likelihood):
-        """Compute Hessian element H[i,j]"""
-        p_plus = params.copy()
-        p_plus[i] += eps
-        p_plus[j] += eps
-
-        p_minus_i = params.copy()
-        p_minus_i[i] -= eps
-
-        p_minus_j = params.copy()
-        p_minus_j[j] -= eps
-
-        f_pp = f(p_plus)
-        f_pi = f(p_minus_i)
-        f_pj = f(p_minus_j)
-        f_p = f(params)
-
-        return (f_pp - f_pi - f_pj + f_p) / (4 * eps ** 2)
-
     params_opt = np.array([theta_opt, mu_opt, sigma_opt])
+    f_center = neg_log_likelihood(params_opt)
+
+    def hessian_element(params, i, j):
+        """Compute Hessian element H[i,j] via central finite differences.
+
+        Diagonal (i==j):  (f(p+e) - 2f(p) + f(p-e)) / e²
+        Off-diagonal:     (f(p+ei+ej) - f(p+ei-ej) - f(p-ei+ej) + f(p-ei-ej)) / (4e²)
+        """
+        if i == j:
+            p_plus = params.copy(); p_plus[i] += eps
+            p_minus = params.copy(); p_minus[i] -= eps
+            return (neg_log_likelihood(p_plus) - 2 * f_center + neg_log_likelihood(p_minus)) / eps ** 2
+        else:
+            p_pp = params.copy(); p_pp[i] += eps; p_pp[j] += eps
+            p_pm = params.copy(); p_pm[i] += eps; p_pm[j] -= eps
+            p_mp = params.copy(); p_mp[i] -= eps; p_mp[j] += eps
+            p_mm = params.copy(); p_mm[i] -= eps; p_mm[j] -= eps
+            return (neg_log_likelihood(p_pp) - neg_log_likelihood(p_pm)
+                    - neg_log_likelihood(p_mp) + neg_log_likelihood(p_mm)) / (4 * eps ** 2)
+
     H = np.zeros((3, 3))
     for i in range(3):
         for j in range(3):
@@ -193,8 +194,9 @@ def estimate_ou_mle(
         cov_matrix = np.linalg.inv(H)
         std_errors = np.sqrt(np.abs(np.diag(cov_matrix)))
     except np.linalg.LinAlgError:
-        # If Hessian is singular, use bootstrap-like approach
-        std_errors = np.array([theta_opt * 0.1, sigma_opt * 0.1, sigma_opt * 0.1])
+        # If Hessian is singular, fall back to rough scale estimates
+        # mu SE: spread std dev / sqrt(n) (uncertainty in sample mean)
+        std_errors = np.array([theta_opt * 0.1, np.std(X) / np.sqrt(n), sigma_opt * 0.1])
 
     # 95% confidence intervals (approximately ±1.96 * std_error)
     z_95 = 1.96

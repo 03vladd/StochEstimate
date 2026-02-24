@@ -226,19 +226,16 @@ def backtest_pairs_trading(
             exit_spread = spread.iloc[idx]
             days_held = exit_idx - entry_idx
 
-            # Calculate profit
-            # For simplicity: profit = (price change) * (position size / entry price)
-            # We use the position size directly as the base
+            # Calculate profit.
+            # Normalise by sigma (the spread's natural volatility scale) rather than
+            # abs(entry_spread). entry_spread is a synthetic OLS residual that can be
+            # near zero, producing arbitrarily large and economically meaningless
+            # "percentage returns". sigma is always positive and gives a stable scale.
+            # Interpretation: position_size dollars of profit per 1-sigma spread move.
             spread_change = exit_spread - entry_spread
-
-            if entry_signal == 'ENTRY_BUY_A':
-                # We're long the spread: profit if spread goes up
-                profit = (spread_change / abs(entry_spread)) * position_size if entry_spread != 0 else 0
-            else:  # ENTRY_SELL_A
-                # We're short the spread: profit if spread goes down
-                profit = -(spread_change / abs(entry_spread)) * position_size if entry_spread != 0 else 0
-
-            profit_pct = (spread_change / abs(entry_spread) * 100) if entry_spread != 0 else 0
+            signed_change = spread_change if entry_signal == 'ENTRY_BUY_A' else -spread_change
+            profit = (signed_change / sigma) * position_size if sigma > 0 else 0
+            profit_pct = (signed_change / sigma) * 100 if sigma > 0 else 0
 
             trade = Trade(
                 pair_name=pair_name,
@@ -248,7 +245,7 @@ def backtest_pairs_trading(
                 exit_spread=exit_spread,
                 signal=entry_signal,
                 profit=profit,
-                profit_pct=profit_pct if entry_signal == 'ENTRY_BUY_A' else -profit_pct,
+                profit_pct=profit_pct,
                 days_held=days_held
             )
 

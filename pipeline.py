@@ -25,6 +25,11 @@ from database.db_manager import DatabaseManager
 
 def extract_validation_data(report) -> dict:
     """Extract validation statistics for database storage"""
+    acf = report.autocorrelation
+    # r_squared and theta are None when curve_fit fails; guard against float(None) crash
+    acf_r_squared = float(acf.r_squared) if acf.r_squared is not None else 0.0
+    acf_theta = float(acf.theta) if acf.theta is not None else 0.0
+
     return {
         'stationarity_passed': bool(report.stationarity.passed),
         'stationarity_pvalue': float(report.stationarity.p_value),
@@ -38,9 +43,9 @@ def extract_validation_data(report) -> dict:
         'volatility_pvalue': float(report.constant_volatility.p_value),
         'volatility_statistic': float(report.constant_volatility.levene_statistic),
 
-        'autocorr_passed': bool(report.autocorrelation.passed),
-        'autocorr_pvalue': float(report.autocorrelation.r_squared),
-        'autocorr_statistic': float(report.autocorrelation.theta),
+        'autocorr_passed': bool(acf.passed),
+        'autocorr_pvalue': acf_r_squared,   # Stores R² (goodness-of-fit), not a p-value
+        'autocorr_statistic': acf_theta,    # Stores theta fitted from ACF exponential
 
         'normality_passed': bool(report.normality.passed),
         'normality_pvalue': float(report.normality.p_value),
@@ -233,7 +238,7 @@ class HybridPipeline:
                     print("✗ Failed to fetch data")
                     continue
 
-                # A. Detailed Validation
+                # A. Detailed Validation (on full spread)
                 print(f"\nA. VALIDATION")
                 print(f"   Hedge ratio (β): {coint_result['hedge_ratio']:.6f}")
                 print(f"   Intercept (α): {coint_result['intercept']:.6f}")
@@ -242,19 +247,27 @@ class HybridPipeline:
                 validation_report = validate_series(spread, name=name)
                 print(validation_report.summary())
 
-                # B. MLE Estimation
-                print(f"\nB. MLE PARAMETER ESTIMATION")
-                print(f"   Running optimization on {len(spread)} observations...")
+                # B. MLE Estimation on training set (first 70%) to avoid look-ahead bias.
+                # Using full-sample parameters to trade historically means the strategy
+                # "knows" the true equilibrium before it could have been observed.
+                n_total = len(spread)
+                split_idx = int(n_total * 0.7)
+                estimation_spread = spread.iloc[:split_idx]
+                backtest_spread = spread.iloc[split_idx:]
 
-                mle_result = estimate_ou_mle(spread, verbose=True)
+                print(f"\nB. MLE PARAMETER ESTIMATION")
+                print(f"   Train/test split: {split_idx} obs for estimation, "
+                      f"{n_total - split_idx} obs held out for backtesting")
+
+                mle_result = estimate_ou_mle(estimation_spread, verbose=True)
                 print(mle_result.detailed_result)
 
-                # C. Backtesting
+                # C. Backtesting on held-out test set (last 30%) only
                 print(f"\nC. BACKTESTING")
-                print(f"   Running backtest with MLE parameters...")
+                print(f"   Running out-of-sample backtest on {n_total - split_idx} observations...")
 
                 backtest_result = backtest_pairs_trading(
-                    spread=spread,
+                    spread=backtest_spread,
                     theta=mle_result.theta,
                     mu=mle_result.mu,
                     sigma=mle_result.sigma,
