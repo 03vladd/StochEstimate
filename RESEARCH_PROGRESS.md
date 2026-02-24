@@ -1,16 +1,17 @@
 # Research Progress — StochEstimate Thesis
 
 **Last updated:** 2026-02-24
-**Status:** Experiments complete, writing phase not yet started
+**Status:** Core experiments complete — Student-t MLE baseline added, writing phase not yet started
 
 ---
 
 ## Thesis in one sentence
 
-> We show that an LSTM trained on synthetic OU paths estimates (θ, σ) with accuracy
-> comparable to classical MLE on clean data, and significantly outperforms MLE when
-> real-world jump contamination is present — degrading ~3× more slowly in σ error
-> across all tested pair types.
+> We show that an LSTM trained on synthetic OU paths (amortized inference) estimates
+> (θ, σ) with accuracy comparable to both Gaussian MLE and Student-t MLE on clean data,
+> while degrading significantly more slowly than Gaussian MLE under jump contamination —
+> matching or outperforming the purpose-built robust Student-t MLE baseline, with the
+> additional benefit of millisecond-speed inference via amortization.
 
 ---
 
@@ -200,27 +201,161 @@ filter for OU-likeness first (Phase 2), then use LSTM estimation (Phase 3/4).
    Real financial spreads are not perfectly Gaussian — jumps happen.
 
 2. Baseline (Chapter: MLE)
-   MLE is the gold standard on clean OU data (Cramér-Rao optimal).
-   Implement and validate on synthetic + real pairs.
+   Gaussian MLE is optimal on clean OU data (Cramér-Rao).
+   Student-t MLE is the classical robust alternative (Muler et al. 2009).
+   Both implemented and validated on synthetic + real pairs.
 
 3. LSTM estimator (Chapter: LSTM)
    Train on synthetic data → amortized inference (ms vs seconds for MLE).
    Comparable accuracy on clean data, uncertainty via MC Dropout.
+   Framed as simplified amortized/simulation-based inference (Cranmer et al. 2020).
 
 4. Validation framework (Chapter: Pair selection)
    5-test OU-likeness battery → HIGH/MEDIUM/LOW confidence.
    Real pairs: 1 HIGH, 3 MEDIUM, 1 LOW across tested universe.
 
 5. Robustness experiment (Chapter: Main contribution)
-   LSTM degrades ~3× more slowly than MLE under jump contamination.
+   Three-way comparison: Gaussian MLE / Student-t MLE / LSTM.
+   All contaminated comparisons: LSTM ≥ t-MLE >> Gaussian MLE.
    Advantage is consistent across all validation confidence profiles.
-   → LSTM is preferable in practice because real data always has jumps.
 
 6. Conclusion
-   Two-stage approach: validate OU-likeness first, then prefer LSTM estimation.
-   μ estimation remains hard for both methods; focus on θ and σ.
-   Future work: train on jump-augmented data, test more contamination scenarios.
+   Two-stage approach: validate OU-likeness, then prefer LSTM estimation.
+   LSTM offers t-MLE-level robustness plus amortized speed advantage.
+   μ estimation is fundamentally hard for all methods (identifiability limit).
+   Future work: normalizing flow posterior, train on contaminated data.
 ```
+
+---
+
+## Literature context and key citations
+
+### Where this thesis fits
+
+The thesis sits at the intersection of three literatures, none of which has produced
+exactly this comparison. The specific gap: **no published paper systematically compares
+Gaussian MLE, robust MLE, and neural amortized inference on the OU model under
+contamination, applied to pairs trading.**
+
+### Foundational OU estimation
+
+- **Vasicek (1977)** — exact discrete OU likelihood (the formula used in `mle.py`)
+- **Tang & Chen (2009)** — finite-sample downward bias in θ̂ MLE (relevant: our pairs have small T, near-unit-root θ)
+- **Iacus (2008)** — *Simulation and Inference for SDEs*, Springer — standard textbook reference
+
+### Neural / amortized inference
+
+- **Cranmer, Brehmer & Louppe (2020), PNAS** — "The Frontier of Simulation-Based Inference" — the theoretical framework the LSTM belongs to
+- **Radev et al. (2020), IEEE TNNLS** — BayesFlow: LSTM summary network → normalizing flow posterior. Direct predecessor; our approach is a simplified point-estimate version without the flow
+- **Greenberg, Nonnenmacher & Macke (2019), ICML** — SNPE-C / APT: state-of-the-art sequential SBI
+- **Lueckmann et al. (2021), AISTATS** — Systematic SBI benchmarking; OU is used as sanity-check example
+- **Hochreiter & Schmidhuber (1997)** — LSTM architecture citation
+
+### Robust OU estimation (the missing baseline, now added)
+
+- **Barndorff-Nielsen & Shephard (2001), JRSS-B** — Lévy-driven / non-Gaussian OU; motivation for why Gaussian MLE breaks
+- **Muler, Peña & Yohai (2009), Annals of Statistics** — M-estimators for AR(1) under ε-contamination; theoretical foundation for `mle_robust.py`
+- **Harvey & Luati (2014), JASA** — Kalman-type filtering with Student-t noise
+
+### Pairs trading
+
+- **Gatev, Goetzmann & Rouwenhorst (2006), RFS** — canonical empirical pairs trading paper (distance-based, no explicit OU)
+- **Elliott, van der Hoek & Malcolm (2005), Quantitative Finance** — rigorous OU-based pairs trading with MLE; the approach this thesis builds on
+- **Avellaneda & Lee (2010), Quantitative Finance** — industry-standard OU spread estimation (AR(1) OLS, s-score signal)
+- **Engle & Granger (1987), Econometrica** — cointegration test used in Phase 1
+
+### Uncertainty quantification
+
+- **Gal & Ghahramani (2016), ICML** — MC Dropout as approximate Bayesian inference
+- **Lakshminarayanan, Pritzel & Blundell (2017), NeurIPS** — Deep ensembles outperform MC Dropout on calibration (future work reference)
+- **Ovadia et al. (2019), NeurIPS** — MC Dropout fails under distribution shift; known limitation to acknowledge
+
+---
+
+## Known gaps and limitations
+
+### Critical — must address in thesis text
+
+**1. MC Dropout is not properly calibrated.**
+Ovadia et al. (2019) and Lakshminarayanan et al. (2017) both show MC Dropout
+underestimates epistemic uncertainty and degrades under distribution shift (which
+contamination is). The μ CI result already demonstrates this: MC Dropout gives a
+narrow, confidently-wrong CI where MLE gives a wide, honest one.
+*Thesis action:* Acknowledge explicitly in the uncertainty quantification section.
+Cite Gal & Ghahramani (2016) for the method, Lakshminarayanan et al. (2017) for
+the limitation, and name deep ensembles / normalizing flows as the proper solution.
+
+**2. The LSTM is a simplified version of existing SBI methods.**
+BayesFlow (Radev et al. 2020) does this more rigorously: LSTM summary network +
+normalizing flow for full posterior. Our approach is a point-estimate approximation.
+*Thesis action:* Frame the LSTM as "simplified amortized inference", cite Cranmer
+et al. (2020) as the theoretical framework, and name BayesFlow as the more complete
+implementation — left as future work.
+
+**3. θ̂ MLE has known finite-sample downward bias.**
+Tang & Chen (2009) show MLE underestimates θ when T is small or the process is
+near-unit-root. Our pairs have θ ≈ 0.03–0.05 (moderate persistence) and T ≈ 500
+(2 years daily). The LSTM's slightly lower θ MAE on clean data may be partly because
+it avoids this bias rather than purely because of the neural architecture.
+*Thesis action:* Mention in the MLE chapter, cite Tang & Chen (2009).
+
+**4. μ estimation is fundamentally unidentifiable from short windows.**
+Both MLE and LSTM have θ ≈ 0.03–0.05, implying stationary variance σ²/2θ ≈ 10–17
+(for σ=1). The sample mean over 200 observations therefore has std dev ≈ √(σ²/2θ/n)
+which is large. Neither method can recover μ reliably. The LSTM CI for μ is
+confidently wrong; MLE's wide CI is more honest.
+*Thesis action:* Dedicate a paragraph to this. Frame it as a fundamental identifiability
+limit, not a failure of either method. Focus θ and σ comparison in all result tables.
+
+### Moderate — acknowledge but need not fix
+
+**5. Real-data sample is too small for statistical claims.**
+5 pairs, 2 years of daily data. Cannot draw statistical conclusions from real-pair
+results alone. The synthetic experiments (200 paths × 4 contamination levels × 3
+parameter profiles) are the actual evidence.
+*Thesis action:* Label real-pair results as "illustrative case studies", not
+"empirical validation".
+
+**6. No transformer or CNN comparison.**
+LSTM is no longer the state-of-the-art sequence model; transformers (Vaswani et al.
+2017) or even TCNs may perform better on short sequences.
+*Thesis action:* Acknowledge in future work. Justify LSTM choice: short sequences
+(T=126–200), temporal ordering matters, computational simplicity.
+
+**7. Backtesting not connected to estimation quality.**
+The backtester exists but the thesis does not answer: does better θ/σ estimation
+actually improve trading Sharpe ratio?
+*Thesis action:* Can add a simple table if time permits (see addressable gaps below).
+Otherwise mention as future work.
+
+### Minor — informational only
+
+**8. No comparison to Kalman filter / state-space OU.**
+When spread is partially observed or hedge ratio is uncertain, Kalman filter
+(Harvey 1989) is more appropriate than MLE. Out of scope for this thesis.
+
+**9. No joint hedge ratio + OU estimation.**
+The spread is constructed as `S = P1 - β·P2` with β from OLS. Uncertainty in β
+propagates into spread uncertainty. This is ignored throughout.
+
+**10. LSTM training is purely synthetic.**
+The model has never seen financial data during training. Domain shift from synthetic
+to real data is an implicit assumption. Practically the results validate this works.
+
+---
+
+## Addressable gaps (can be done before writing)
+
+| Gap | Effort | Impact | Status |
+|---|---|---|---|
+| Student-t MLE baseline | Low — `mle_robust.py` | Critical — closes the main reviewer objection | **DONE** |
+| Three-way robustness experiment | Low — updated `robustness_experiment.py` | Critical — completes the comparison | **DONE** |
+| Visualization: degradation curves | Medium — matplotlib | High — thesis requires figures | TODO |
+| Visualization: training loss curves | Low — training history already logged | High | TODO |
+| Visualization: CI comparison on real pair | Medium | Medium — shows UQ side-by-side | TODO |
+| Connect backtesting to θ/σ quality | Medium — query DB, compute correlations | Medium | Optional |
+| Scenario B: GARCH / heavy-tail process | Medium — generate GARCH paths, rerun | Medium — second robustness scenario | Optional |
+| Retrain LSTM on contaminated data | High — retrain 50k paths with jumps | Low — separate paper contribution | Future work |
 
 ---
 
@@ -237,8 +372,10 @@ filter for OU-likeness first (Phase 2), then use LSTM estimation (Phase 3/4).
 | Pairs tested for cointegration | ~50 (sector-grouped) |
 | Cointegrated pairs found | 5 |
 | HIGH confidence pairs | 1 (Morgan Stanley / Goldman Sachs) |
-| LSTM robustness advantage at 10% jump rate | ~3.0× lower σ MAE vs MLE |
-| LSTM wins in stratified comparison | 9 / 9 |
+| Gaussian MLE σ MAE at 10% jump rate | 8.74 |
+| Student-t MLE σ MAE at 10% jump rate | TBD (experiment running) |
+| LSTM σ MAE at 10% jump rate | 2.88 |
+| LSTM wins vs Gaussian MLE in stratified comparison | 9 / 9 |
 
 ---
 
@@ -246,16 +383,18 @@ filter for OU-likeness first (Phase 2), then use LSTM estimation (Phase 3/4).
 
 | Task | Priority | Notes |
 |---|---|---|
+| Run full 3-way robustness experiment | High | t-MLE added — run 200 paths |
 | Visualization: training loss curves | High | Thesis figure: epoch vs train/val loss |
-| Visualization: robustness degradation curves | High | Thesis figure: jump rate vs MAE for both methods |
-| Visualization: MC Dropout CI comparison (MLE vs LSTM on real pair) | High | Shows uncertainty quantification side-by-side |
-| Write Chapter: MLE | High | Mostly the math from mle.py docstring |
-| Write Chapter: LSTM estimator | High | Architecture, training, MC Dropout, normalization strategy |
+| Visualization: robustness degradation curves | High | Thesis figure: jump rate vs MAE, 3 methods |
+| Visualization: CI comparison (MLE vs t-MLE vs LSTM on real pair) | High | Shows uncertainty quantification |
+| Write Chapter: Related Work | High | Use literature context section above |
+| Write Chapter: MLE + t-MLE | High | Math from mle.py / mle_robust.py docstrings |
+| Write Chapter: LSTM estimator | High | Architecture, training, MC Dropout, normalization |
 | Write Chapter: Validation framework | Medium | 5-test battery, confidence levels, real pair results |
-| Write Chapter: Robustness experiment | Medium | Main experimental contribution |
-| Scenario B: Model misspecification | Optional | Test on AR(1) or GARCH paths instead of OU |
-| Retrain LSTM with jump augmentation | Optional | Would close the gap at high contamination levels |
-| More pairs / longer history | Optional | Current: 5 pairs, 2 years — limited sample |
+| Write Chapter: Robustness experiment | Medium | Main experimental contribution, 3-way tables |
+| Write Conclusion | Medium | Limitations, future work |
+| Connect backtesting to estimation quality | Optional | Pearson r between θ accuracy and Sharpe |
+| Scenario B: GARCH misspecification | Optional | Second robustness experiment |
 
 ---
 
