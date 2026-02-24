@@ -12,12 +12,27 @@ Hypothesis:
     spikes; it was not trained on jumps so it will degrade too, but possibly
     more slowly.
 
+Stratified experiment:
+  Repeats the analysis using OU parameter profiles matching the three
+  validation confidence levels observed in real pairs:
+
+    HIGH   profile — θ≈0.034, σ≈1.0  (Morgan Stanley / Goldman Sachs)
+                     Near-ideal OU: normality passes, stable volatility
+    MEDIUM profile — θ≈0.035, σ≈2.0  (average of EOG/SLB, AMZN/WMT, EXC/AEP)
+                     Some OU-likeness criteria fail (heavy tails, vol clustering)
+    LOW    profile — θ≈0.054, σ≈0.3  (PPL / Ameren)
+                     Only 2/5 tests pass; weaker stationarity signal
+
+  This answers: "Does the LSTM robustness advantage hold even for the
+  cleanest (HIGH-confidence) pairs, or only for noisy ones?"
+
 Output:
   A table of θ MAE / σ MAE for each method at each contamination level,
   plus a brief narrative conclusion for the thesis.
 
 Usage:
   python estimation/robustness_experiment.py [--n-paths N] [--model PATH]
+  python estimation/robustness_experiment.py --stratified [--n-paths N] [--model PATH]
 """
 
 import os
@@ -216,6 +231,152 @@ def print_summary_table(df: pd.DataFrame):
     print("=" * 78)
 
 
+# ── Stratified experiment (by validation confidence profile) ─────────────────
+
+# Parameter profiles derived from actual DB pairs (MLE estimates on 2023-2025 data)
+CONFIDENCE_PROFILES = {
+    'HIGH':   {'theta': 0.034, 'sigma': 1.02, 'example': 'Morgan Stanley / Goldman Sachs'},
+    'MEDIUM': {'theta': 0.035, 'sigma': 2.00, 'example': 'EOG/SLB, AMZN/WMT, EXC/AEP (avg)'},
+    'LOW':    {'theta': 0.054, 'sigma': 0.22, 'example': 'PPL / Ameren'},
+}
+
+
+def run_stratified_experiment(n_paths: int, model_path: str) -> dict[str, pd.DataFrame]:
+    """
+    Run the jump contamination experiment once per confidence-level profile.
+
+    Returns a dict: confidence_level -> results DataFrame (same schema as run_experiment).
+    """
+    print(f"Loading LSTM model from: {model_path}", flush=True)
+    lstm = OULSTMEstimator()
+    lstm.load(model_path)
+
+    all_results = {}
+
+    for level, profile in CONFIDENCE_PROFILES.items():
+        theta_true = profile['theta']
+        sigma_true = profile['sigma']
+        mu_true    = 0.0
+
+        print(f"\n{'='*78}", flush=True)
+        print(f"CONFIDENCE PROFILE: {level}  "
+              f"(θ={theta_true}, σ={sigma_true})  —  {profile['example']}", flush=True)
+        print(f"{'='*78}", flush=True)
+
+        records = []
+
+        for jump_rate in JUMP_RATES:
+            label = f"{int(jump_rate * 100):2d}%"
+            print(f"\n  Jump rate {label} — estimating {n_paths} paths ...", flush=True)
+
+            mle_theta_errs, mle_sigma_errs = [], []
+            lstm_theta_errs, lstm_sigma_errs = [], []
+
+            for i in range(n_paths):
+                seed = SEED_BASE + i
+                path = generate_ou_process(
+                    mu=mu_true, theta=theta_true, sigma=sigma_true,
+                    n_steps=PATH_LENGTH, dt=1.0, initial_value=0.0,
+                    seed=seed
+                )
+                contaminated = add_jump_contamination(
+                    path, jump_rate=jump_rate, jump_scale=JUMP_SCALE,
+                    seed=seed + 10000
+                )
+
+                t_mle, s_mle = run_mle(contaminated)
+                if not (np.isnan(t_mle) or np.isnan(s_mle)):
+                    mle_theta_errs.append(abs(t_mle - theta_true))
+                    mle_sigma_errs.append(abs(s_mle - sigma_true))
+
+                t_lstm, s_lstm = run_lstm(lstm, contaminated)
+                if not (np.isnan(t_lstm) or np.isnan(s_lstm)):
+                    lstm_theta_errs.append(abs(t_lstm - theta_true))
+                    lstm_sigma_errs.append(abs(s_lstm - sigma_true))
+
+            def _stats(errs):
+                if not errs:
+                    return float('nan'), float('nan')
+                a = np.array(errs)
+                return float(np.mean(a)), float(np.sqrt(np.mean(a ** 2)))
+
+            mle_t_mae,  mle_t_rmse  = _stats(mle_theta_errs)
+            mle_s_mae,  mle_s_rmse  = _stats(mle_sigma_errs)
+            lstm_t_mae, lstm_t_rmse = _stats(lstm_theta_errs)
+            lstm_s_mae, lstm_s_rmse = _stats(lstm_sigma_errs)
+
+            print(f"    MLE  — θ MAE={mle_t_mae:.4f}  σ MAE={mle_s_mae:.4f}  (n={len(mle_theta_errs)})", flush=True)
+            print(f"    LSTM — θ MAE={lstm_t_mae:.4f}  σ MAE={lstm_s_mae:.4f}  (n={len(lstm_theta_errs)})", flush=True)
+
+            for method, t_mae, t_rmse, s_mae, s_rmse, n_v in [
+                ('MLE',  mle_t_mae,  mle_t_rmse,  mle_s_mae,  mle_s_rmse,  len(mle_theta_errs)),
+                ('LSTM', lstm_t_mae, lstm_t_rmse, lstm_s_mae, lstm_s_rmse, len(lstm_theta_errs)),
+            ]:
+                records.append(dict(
+                    jump_rate=jump_rate, method=method,
+                    theta_mae=t_mae, theta_rmse=t_rmse,
+                    sigma_mae=s_mae, sigma_rmse=s_rmse,
+                    n_valid=n_v,
+                ))
+
+        all_results[level] = pd.DataFrame(records)
+
+    return all_results
+
+
+def print_stratified_summary(all_results: dict[str, pd.DataFrame]):
+    """Print a compact cross-profile comparison table for the thesis."""
+    print("\n\n" + "=" * 90)
+    print("STRATIFIED ROBUSTNESS — Jump Contamination by Validation Confidence Profile")
+    print(f"Jump scale={JUMP_SCALE}×σ  |  Path length={PATH_LENGTH}  |  σ MAE shown (normalized by true σ)")
+    print("=" * 90)
+    print(f"{'Profile':>8}  {'True θ':>7}  {'True σ':>7}  "
+          + "  ".join(f"{int(r*100):>3}% jump" for r in JUMP_RATES))
+    print(f"{'':>8}  {'':>7}  {'':>7}  "
+          + "  ".join("MLE  LSTM" for _ in JUMP_RATES))
+    print("-" * 90)
+
+    for level, df in all_results.items():
+        profile = CONFIDENCE_PROFILES[level]
+        sigma_true = profile['sigma']
+        row_parts = []
+        for jr in JUMP_RATES:
+            mle_row  = df[(df.jump_rate == jr) & (df.method == 'MLE')].iloc[0]
+            lstm_row = df[(df.jump_rate == jr) & (df.method == 'LSTM')].iloc[0]
+            # Normalize by true sigma so profiles with different σ scales are comparable
+            mle_norm  = mle_row['sigma_mae']  / sigma_true
+            lstm_norm = lstm_row['sigma_mae'] / sigma_true
+            row_parts.append(f"{mle_norm:.3f} {lstm_norm:.3f}")
+        print(f"{level:>8}  {profile['theta']:>7.3f}  {profile['sigma']:>7.2f}  " +
+              "  ".join(row_parts))
+
+    print("=" * 90)
+    print("Values are σ MAE / σ_true (lower = better). Each pair of columns = one jump rate.")
+    print()
+
+    # Check consistency: does LSTM win at every (profile, contamination) combination?
+    lstm_wins = 0
+    total_comparisons = 0
+    for level, df in all_results.items():
+        sigma_true = CONFIDENCE_PROFILES[level]['sigma']
+        for jr in JUMP_RATES:
+            if jr == 0.0:
+                continue  # 0% is baseline, skip for win-count
+            mle_mae  = df[(df.jump_rate == jr) & (df.method == 'MLE')].iloc[0]['sigma_mae']
+            lstm_mae = df[(df.jump_rate == jr) & (df.method == 'LSTM')].iloc[0]['sigma_mae']
+            total_comparisons += 1
+            if lstm_mae < mle_mae:
+                lstm_wins += 1
+
+    print(f"LSTM wins {lstm_wins}/{total_comparisons} contaminated comparisons across all profiles.")
+    if lstm_wins == total_comparisons:
+        print("Conclusion: LSTM robustness advantage is consistent regardless of validation confidence level.")
+        print("This supports the two-stage approach: validate for OU-likeness first, then use LSTM.")
+    else:
+        print("Conclusion: LSTM robustness advantage is not universal — see table for exceptions.")
+    print("=" * 90)
+
+
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 def main():
@@ -224,6 +385,8 @@ def main():
                         help='Number of synthetic paths per contamination level (default: 200)')
     parser.add_argument('--model', type=str, default=DEFAULT_MODEL_PATH,
                         help='Path to trained LSTM .pt file')
+    parser.add_argument('--stratified', action='store_true',
+                        help='Run stratified experiment by validation confidence profile')
     args = parser.parse_args()
 
     if not os.path.exists(args.model):
@@ -231,18 +394,34 @@ def main():
         print("Run 'python estimation/train_lstm.py' first.")
         sys.exit(1)
 
-    print("=" * 78)
-    print(f"ROBUSTNESS EXPERIMENT — Scenario A: Jump Contamination")
-    print(f"Paths per level: {args.n_paths}  |  Jump rates: {JUMP_RATES}")
-    print("=" * 78)
+    if args.stratified:
+        print("=" * 78)
+        print(f"ROBUSTNESS EXPERIMENT — Stratified by Validation Confidence Profile")
+        print(f"Paths per level: {args.n_paths}  |  Jump rates: {JUMP_RATES}")
+        print("=" * 78)
 
-    df = run_experiment(n_paths=args.n_paths, model_path=args.model)
-    print_summary_table(df)
+        all_results = run_stratified_experiment(n_paths=args.n_paths, model_path=args.model)
+        print_stratified_summary(all_results)
 
-    # Save results to CSV next to the script
-    out_path = os.path.join(os.path.dirname(__file__), 'robustness_results_jumps.csv')
-    df.to_csv(out_path, index=False)
-    print(f"\nResults saved to: {out_path}")
+        out_path = os.path.join(os.path.dirname(__file__), 'robustness_results_stratified.csv')
+        pd.concat(
+            [df.assign(confidence=level) for level, df in all_results.items()],
+            ignore_index=True
+        ).to_csv(out_path, index=False)
+        print(f"\nResults saved to: {out_path}")
+
+    else:
+        print("=" * 78)
+        print(f"ROBUSTNESS EXPERIMENT — Scenario A: Jump Contamination")
+        print(f"Paths per level: {args.n_paths}  |  Jump rates: {JUMP_RATES}")
+        print("=" * 78)
+
+        df = run_experiment(n_paths=args.n_paths, model_path=args.model)
+        print_summary_table(df)
+
+        out_path = os.path.join(os.path.dirname(__file__), 'robustness_results_jumps.csv')
+        df.to_csv(out_path, index=False)
+        print(f"\nResults saved to: {out_path}")
 
 
 if __name__ == '__main__':
