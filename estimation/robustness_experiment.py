@@ -36,7 +36,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from synthetic_data.ou_generator import generate_ou_process, add_jump_contamination
 from estimation.mle import estimate_ou_mle
-from estimation.mle_robust import estimate_ou_t_mle
+from estimation.mle_robust import estimate_ou_t_mle, estimate_ou_t_mle_adaptive
 from estimation.lstm_estimator import OULSTMEstimator
 
 # ── Experiment parameters ─────────────────────────────────────────────────────
@@ -54,9 +54,12 @@ SEED_BASE   = 2025      # Base RNG seed; each path gets SEED_BASE + path_idx
 DEFAULT_MODEL_PATH = os.path.join(
     os.path.dirname(__file__), 'saved_models', 'ou_lstm_v1.pt'
 )
+DEFAULT_MODEL_ROBUST_PATH = os.path.join(
+    os.path.dirname(__file__), 'saved_models', 'ou_lstm_v2_robust.pt'
+)
 
 # Method display order (consistent across all tables)
-METHOD_ORDER = ['MLE', 't-MLE', 'LSTM']
+METHOD_ORDER = ['MLE', 't-MLE', 't-MLE(df*)', 'LSTM', 'LSTM-robust']
 
 # ── Core estimation helpers ───────────────────────────────────────────────────
 
@@ -82,10 +85,30 @@ def run_t_mle(series: pd.Series, df: float = 4.0) -> tuple[float, float]:
         return float('nan'), float('nan')
 
 
+def run_t_mle_adaptive(series: pd.Series) -> tuple[float, float]:
+    """Return (theta_hat, sigma_hat) from Student-t MLE with df estimated jointly."""
+    try:
+        result = estimate_ou_t_mle_adaptive(series, verbose=False)
+        if result.theta > 0 and result.sigma > 0:
+            return result.theta, result.sigma
+        return float('nan'), float('nan')
+    except Exception:
+        return float('nan'), float('nan')
+
+
 def run_lstm(estimator: OULSTMEstimator, series: pd.Series) -> tuple[float, float]:
     """Return (theta_hat, sigma_hat) from LSTM MC-mean, or (nan, nan) on failure."""
     try:
         result = estimator.estimate(series, n_mc_samples=50)  # 50 draws → fast
+        return result.theta, result.sigma
+    except Exception:
+        return float('nan'), float('nan')
+
+
+def run_lstm_robust(estimator: OULSTMEstimator, series: pd.Series) -> tuple[float, float]:
+    """Return (theta_hat, sigma_hat) from LSTM-v2-robust MC-mean, or (nan, nan) on failure."""
+    try:
+        result = estimator.estimate(series, n_mc_samples=50)
         return result.theta, result.sigma
     except Exception:
         return float('nan'), float('nan')
@@ -143,20 +166,32 @@ def _run_paths(methods: dict, theta_true: float, sigma_true: float,
 
 # ── Main experiment ───────────────────────────────────────────────────────────
 
-def run_experiment(n_paths: int, model_path: str) -> pd.DataFrame:
+def run_experiment(n_paths: int, model_path: str,
+                   model_robust_path: str = None) -> pd.DataFrame:
     """
-    Three-way comparison (MLE / t-MLE / LSTM) at four jump contamination levels.
+    Four-way comparison (MLE / t-MLE / LSTM / LSTM-robust) at four jump contamination levels.
+    LSTM-robust is included only if model_robust_path points to an existing file.
     Returns DataFrame with columns: jump_rate | method | theta_mae | theta_rmse | sigma_mae | sigma_rmse
     """
-    print(f"Loading LSTM model from: {model_path}", flush=True)
+    print(f"Loading LSTM-v1 model from: {model_path}", flush=True)
     lstm = OULSTMEstimator()
     lstm.load(model_path)
 
     methods = {
-        'MLE':   run_mle,
-        't-MLE': run_t_mle,
-        'LSTM':  lambda s: run_lstm(lstm, s),
+        'MLE':        run_mle,
+        't-MLE':      run_t_mle,
+        't-MLE(df*)': run_t_mle_adaptive,
+        'LSTM':       lambda s: run_lstm(lstm, s),
     }
+
+    if model_robust_path and os.path.exists(model_robust_path):
+        print(f"Loading LSTM-v2-robust model from: {model_robust_path}", flush=True)
+        lstm_robust = OULSTMEstimator()
+        lstm_robust.load(model_robust_path)
+        methods['LSTM-robust'] = lambda s: run_lstm_robust(lstm_robust, s)
+    elif model_robust_path:
+        print(f"⚠ LSTM-robust model not found at {model_robust_path} — running 4-way only.",
+              flush=True)
 
     records = []
     for jump_rate in JUMP_RATES:
@@ -167,24 +202,29 @@ def run_experiment(n_paths: int, model_path: str) -> pd.DataFrame:
 
 
 def print_summary_table(df: pd.DataFrame):
-    """Print a formatted three-way comparison table for the thesis."""
+    """Print a formatted comparison table for the thesis (3-way or 4-way)."""
+    methods_in_df = [m for m in METHOD_ORDER if m in df['method'].values]
+    has_robust = 'LSTM-robust' in methods_in_df
+    n_way = len(methods_in_df)
+    W = 95 if has_robust else 84
+
     print("\n")
-    print("=" * 84)
-    print("ROBUSTNESS EXPERIMENT — Scenario A: Jump Contamination (3-way)")
+    print("=" * W)
+    print(f"ROBUSTNESS EXPERIMENT — Scenario A: Jump Contamination ({n_way}-way)")
     print(f"True: θ={TRUE_THETA}, μ={TRUE_MU}, σ={TRUE_SIGMA}  |  "
           f"Jump scale={JUMP_SCALE}×σ  |  Path length={PATH_LENGTH}")
-    print("=" * 84)
-    print(f"{'Jump %':>8}  {'Method':>6}  {'θ MAE':>9}  {'θ RMSE':>9}  "
+    print("=" * W)
+    col_method_w = 13 if has_robust else 6
+    print(f"{'Jump %':>8}  {'Method':>{col_method_w}}  {'θ MAE':>9}  {'θ RMSE':>9}  "
           f"{'σ MAE':>9}  {'σ RMSE':>9}  {'n':>5}")
-    print("-" * 84)
+    print("-" * W)
 
-    methods_in_df = [m for m in METHOD_ORDER if m in df['method'].values]
     last_method = methods_in_df[-1]
 
     for _, row in df.iterrows():
         pct = f"{row['jump_rate'] * 100:.0f}%"
         print(
-            f"{pct:>8}  {row['method']:>6}  "
+            f"{pct:>8}  {row['method']:>{col_method_w}}  "
             f"{row['theta_mae']:>9.4f}  {row['theta_rmse']:>9.4f}  "
             f"{row['sigma_mae']:>9.4f}  {row['sigma_rmse']:>9.4f}  "
             f"{int(row['n_valid']):>5}"
@@ -192,16 +232,15 @@ def print_summary_table(df: pd.DataFrame):
         if row['method'] == last_method:
             print()
 
-    print("=" * 84)
+    print("=" * W)
 
     # Narrative: compare all methods against Gaussian MLE at highest jump rate
     top_jr = JUMP_RATES[-1]
     clean_mle = df[(df.jump_rate == 0.00) & (df.method == 'MLE')].iloc[0]
     high_mle  = df[(df.jump_rate == top_jr) & (df.method == 'MLE')].iloc[0]
-    mle_s_deg = (high_mle['sigma_mae'] - clean_mle['sigma_mae']) / (clean_mle['sigma_mae'] + 1e-9)
 
     print("\nNARRATIVE CONCLUSION")
-    print("-" * 84)
+    print("-" * W)
     print(f"  Baseline (0% contamination) — MLE σ MAE={clean_mle['sigma_mae']:.4f}")
     print(f"  At {top_jr*100:.0f}% contamination:")
     for method in methods_in_df:
@@ -209,9 +248,23 @@ def print_summary_table(df: pd.DataFrame):
         row_clean = df[(df.jump_rate == 0.00)  & (df.method == method)].iloc[0]
         deg = (row_high['sigma_mae'] - row_clean['sigma_mae']) / (row_clean['sigma_mae'] + 1e-9)
         rel = row_high['sigma_mae'] / high_mle['sigma_mae']
-        print(f"    {method:>5}  σ MAE={row_high['sigma_mae']:.4f}  "
+        print(f"    {method:>{col_method_w}}  σ MAE={row_high['sigma_mae']:.4f}  "
               f"(+{deg*100:.0f}% from clean,  {rel:.2f}× MLE)")
-    print("=" * 84)
+
+    # LSTM-robust vs LSTM-v1 delta (only when both are present)
+    if has_robust and 'LSTM' in methods_in_df:
+        print(f"\n  LSTM-robust vs LSTM-v1 delta (negative = robust wins):")
+        for jr in JUMP_RATES:
+            r_v1     = df[(df.jump_rate == jr) & (df.method == 'LSTM')].iloc[0]
+            r_rob    = df[(df.jump_rate == jr) & (df.method == 'LSTM-robust')].iloc[0]
+            d_theta  = r_rob['theta_mae'] - r_v1['theta_mae']
+            d_sigma  = r_rob['sigma_mae'] - r_v1['sigma_mae']
+            sign_t   = '+' if d_theta >= 0 else ''
+            sign_s   = '+' if d_sigma >= 0 else ''
+            print(f"    {int(jr*100):>3}%  Δθ MAE={sign_t}{d_theta:.4f}  "
+                  f"Δσ MAE={sign_s}{d_sigma:.4f}")
+
+    print("=" * W)
 
 
 # ── Stratified experiment (by validation confidence profile) ──────────────────
@@ -224,20 +277,32 @@ CONFIDENCE_PROFILES = {
 }
 
 
-def run_stratified_experiment(n_paths: int, model_path: str) -> dict[str, pd.DataFrame]:
+def run_stratified_experiment(n_paths: int, model_path: str,
+                              model_robust_path: str = None) -> dict[str, pd.DataFrame]:
     """
-    Run the three-way jump contamination experiment once per confidence-level profile.
+    Run the jump contamination experiment once per confidence-level profile.
+    Includes LSTM-robust as a 4th method when model_robust_path is provided.
     Returns dict: confidence_level -> results DataFrame.
     """
-    print(f"Loading LSTM model from: {model_path}", flush=True)
+    print(f"Loading LSTM-v1 model from: {model_path}", flush=True)
     lstm = OULSTMEstimator()
     lstm.load(model_path)
 
     methods = {
-        'MLE':   run_mle,
-        't-MLE': run_t_mle,
-        'LSTM':  lambda s: run_lstm(lstm, s),
+        'MLE':        run_mle,
+        't-MLE':      run_t_mle,
+        't-MLE(df*)': run_t_mle_adaptive,
+        'LSTM':       lambda s: run_lstm(lstm, s),
     }
+
+    if model_robust_path and os.path.exists(model_robust_path):
+        print(f"Loading LSTM-v2-robust model from: {model_robust_path}", flush=True)
+        lstm_robust = OULSTMEstimator()
+        lstm_robust.load(model_robust_path)
+        methods['LSTM-robust'] = lambda s: run_lstm_robust(lstm_robust, s)
+    elif model_robust_path:
+        print(f"⚠ LSTM-robust model not found at {model_robust_path} — running 4-way only.",
+              flush=True)
 
     all_results = {}
 
@@ -324,12 +389,15 @@ def print_stratified_summary(all_results: dict[str, pd.DataFrame]):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="OU estimator robustness: Gaussian MLE vs Student-t MLE vs LSTM"
+        description="OU estimator robustness: Gaussian MLE vs Student-t MLE vs LSTM vs LSTM-robust"
     )
     parser.add_argument('--n-paths', type=int, default=200,
                         help='Number of synthetic paths per contamination level (default: 200)')
     parser.add_argument('--model', type=str, default=DEFAULT_MODEL_PATH,
-                        help='Path to trained LSTM .pt file')
+                        help='Path to LSTM-v1 (clean-trained) .pt file')
+    parser.add_argument('--model-robust', type=str, default=DEFAULT_MODEL_ROBUST_PATH,
+                        help='Path to LSTM-v2-robust (contamination-trained) .pt file. '
+                             'Omit or point to non-existent file to run 3-way comparison only.')
     parser.add_argument('--stratified', action='store_true',
                         help='Run stratified experiment by validation confidence profile')
     args = parser.parse_args()
@@ -339,13 +407,19 @@ def main():
         print("Run 'python estimation/train_lstm.py' first.")
         sys.exit(1)
 
+    n_robust = 1 if (args.model_robust and os.path.exists(args.model_robust)) else 0
+    n_way = f"{4 + n_robust}-way"   # MLE + t-MLE + t-MLE(df*) + LSTM [+ LSTM-robust]
+
     if args.stratified:
         print("=" * 78)
-        print("ROBUSTNESS EXPERIMENT — Stratified by Validation Confidence Profile (3-way)")
+        print(f"ROBUSTNESS EXPERIMENT — Stratified by Validation Confidence Profile ({n_way})")  # noqa
         print(f"Paths per level: {args.n_paths}  |  Jump rates: {JUMP_RATES}")
         print("=" * 78)
 
-        all_results = run_stratified_experiment(n_paths=args.n_paths, model_path=args.model)
+        all_results = run_stratified_experiment(
+            n_paths=args.n_paths, model_path=args.model,
+            model_robust_path=args.model_robust
+        )
         print_stratified_summary(all_results)
 
         out_path = os.path.join(os.path.dirname(__file__), 'robustness_results_stratified.csv')
@@ -357,11 +431,14 @@ def main():
 
     else:
         print("=" * 78)
-        print("ROBUSTNESS EXPERIMENT — Scenario A: Jump Contamination (3-way)")
+        print(f"ROBUSTNESS EXPERIMENT — Scenario A: Jump Contamination ({n_way})")
         print(f"Paths per level: {args.n_paths}  |  Jump rates: {JUMP_RATES}")
         print("=" * 78)
 
-        df = run_experiment(n_paths=args.n_paths, model_path=args.model)
+        df = run_experiment(
+            n_paths=args.n_paths, model_path=args.model,
+            model_robust_path=args.model_robust
+        )
         print_summary_table(df)
 
         out_path = os.path.join(os.path.dirname(__file__), 'robustness_results_jumps.csv')

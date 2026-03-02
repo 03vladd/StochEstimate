@@ -29,7 +29,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from dataclasses import dataclass, field
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from synthetic_data.ou_generator import generate_ou_process
+from synthetic_data.ou_generator import generate_ou_process, add_jump_contamination
 
 
 @dataclass
@@ -146,13 +146,21 @@ class OULSTMEstimator:
         self.is_trained = False
 
     def _generate_training_data(self, n_samples: int, theta_range: tuple,
-                                sigma_range: tuple, seed: int):
+                                sigma_range: tuple, seed: int,
+                                contamination_mix: float = 0.0,
+                                contamination_max_rate: float = 0.10):
         """
         Generate synthetic OU paths for training.
+
+        Args:
+            contamination_mix:     Fraction of paths to contaminate with jumps (0.0 = clean only).
+            contamination_max_rate: Upper bound on jump rate for contaminated paths (drawn Uniform(0.01, max)).
 
         Returns:
             X: (n_samples, window_size, 1) normalized inputs
             y: (n_samples, 3) targets in log-space: (log_θ, μ_norm, log_σ_norm)
+              Targets always reflect the clean OU parameters — model learns to recover
+              underlying parameters despite jump contamination in the input.
         """
         rng = np.random.default_rng(seed)
         path_length = 300  # Generate longer paths, extract window_size windows
@@ -160,7 +168,7 @@ class OULSTMEstimator:
         X_list = []
         y_list = []
 
-        for _ in range(n_samples):
+        for i in range(n_samples):
             # Sample θ ~ LogUniform, μ = 0 (normalized space), σ ~ Uniform
             log_theta_min = np.log(theta_range[0])
             log_theta_max = np.log(theta_range[1])
@@ -173,7 +181,19 @@ class OULSTMEstimator:
                 mu=mu, theta=theta, sigma=sigma,
                 n_steps=path_length, dt=1.0, initial_value=0.0,
                 seed=None
-            ).values
+            )
+
+            # Optionally contaminate with jumps (targets are still the clean OU params)
+            if contamination_mix > 0.0:
+                rng_c = np.random.default_rng(seed + i + 1_000_000)
+                if rng_c.random() < contamination_mix:
+                    jump_rate = float(rng_c.uniform(0.01, contamination_max_rate))
+                    path = add_jump_contamination(
+                        path, jump_rate=jump_rate, jump_scale=5.0,
+                        seed=int(seed + i + 2_000_000)
+                    )
+
+            path = path.values
 
             # Random window extraction
             start = rng.integers(0, path_length - self.window_size)
@@ -203,25 +223,36 @@ class OULSTMEstimator:
 
     def train(self, n_samples: int = 50000, epochs: int = 100, batch_size: int = 256,
               theta_range: tuple = (0.005, 0.5), sigma_range: tuple = (0.1, 2.0),
-              lr: float = 1e-3, val_split: float = 0.1, seed: int = 42) -> TrainingHistory:
+              lr: float = 1e-3, val_split: float = 0.1, seed: int = 42,
+              contamination_mix: float = 0.0,
+              contamination_max_rate: float = 0.10) -> TrainingHistory:
         """
         Train the LSTM on synthetic OU paths.
 
         Args:
-            n_samples:    Number of synthetic paths to generate
-            epochs:       Training epochs
-            batch_size:   Mini-batch size
-            theta_range:  (min, max) for θ ~ LogUniform
-            sigma_range:  (min, max) for σ ~ Uniform
-            lr:           Learning rate
-            val_split:    Fraction held out for validation
-            seed:         Random seed
+            n_samples:             Number of synthetic paths to generate
+            epochs:                Training epochs
+            batch_size:            Mini-batch size
+            theta_range:           (min, max) for θ ~ LogUniform
+            sigma_range:           (min, max) for σ ~ Uniform
+            lr:                    Learning rate
+            val_split:             Fraction held out for validation
+            seed:                  Random seed
+            contamination_mix:     Fraction of training paths contaminated with jumps (0.0 = clean).
+            contamination_max_rate: Max jump rate for contaminated paths.
 
         Returns:
             TrainingHistory with per-epoch train/val losses
         """
-        print(f"Generating {n_samples} synthetic OU paths...", flush=True)
-        X, y = self._generate_training_data(n_samples, theta_range, sigma_range, seed)
+        if contamination_mix > 0.0:
+            print(f"Generating {n_samples} synthetic OU paths "
+                  f"({contamination_mix:.0%} contaminated, "
+                  f"jump rate up to {contamination_max_rate:.0%})...", flush=True)
+        else:
+            print(f"Generating {n_samples} synthetic OU paths...", flush=True)
+        X, y = self._generate_training_data(n_samples, theta_range, sigma_range, seed,
+                                             contamination_mix=contamination_mix,
+                                             contamination_max_rate=contamination_max_rate)
 
         # Train / val split
         n_val = int(n_samples * val_split)

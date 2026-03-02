@@ -171,3 +171,129 @@ def estimate_ou_t_mle(
         mu_ci=mu_ci,
         sigma_ci=sigma_ci,
     )
+
+
+def estimate_ou_t_mle_adaptive(
+        spread: pd.Series,
+        times: np.ndarray = None,
+        initial_guess: tuple = None,
+        verbose: bool = True
+) -> OUEstimationResult:
+    """
+    Student-t MLE with degrees-of-freedom estimated jointly with (θ, μ, σ).
+
+    Optimises over (θ, μ, σ, df) simultaneously. df is constrained to [2.1, 30]:
+      df < 2.1 → variance barely defined, penalised out
+      df > 30  → indistinguishable from Gaussian, penalised out
+
+    This removes the fixed df=4 assumption from estimate_ou_t_mle(), making the
+    comparison with LSTM-robust fair: t-MLE is no longer handicapped by a
+    potentially misspecified tail-weight parameter.
+
+    The estimated df* is stored in result.message for inspection.
+    Interface is otherwise identical to estimate_ou_t_mle().
+    """
+    X = np.asarray(spread.values, dtype=float)
+    n = len(X)
+
+    if times is None:
+        times = np.arange(n, dtype=float)
+    else:
+        times = np.asarray(times, dtype=float)
+
+    dt = np.diff(times)
+
+    if initial_guess is None:
+        mu_init    = np.mean(X)
+        sigma_init = np.std(X)
+        theta_init = 0.1
+        df_init    = 4.0          # start at the standard financial econometrics choice
+        initial_guess = (theta_init, mu_init, sigma_init, df_init)
+
+    def neg_log_likelihood(params):
+        theta, mu, sigma, df = params
+
+        if theta <= 0 or sigma <= 0:
+            return 1e10
+        if df < 2.1 or df > 30.0:        # enforce df in valid range
+            return 1e10
+
+        nll = 0.0
+        for i in range(n - 1):
+            dt_i = dt[i]
+            exp_neg_theta_dt = np.exp(-theta * dt_i)
+
+            m_i = mu + (X[i] - mu) * exp_neg_theta_dt
+
+            if theta < 1e-4:
+                v_i = sigma ** 2 * dt_i
+            else:
+                v_i = (sigma ** 2 / (2 * theta)) * (1 - np.exp(-2 * theta * dt_i))
+
+            if v_i <= 0:
+                return 1e10
+
+            nll -= t_dist.logpdf(X[i + 1], df=df, loc=m_i, scale=np.sqrt(v_i))
+
+        return nll
+
+    result = minimize(
+        neg_log_likelihood,
+        x0=initial_guess,
+        method='Nelder-Mead',
+        options={'maxiter': 10000, 'xatol': 1e-8}
+    )
+
+    theta_opt, mu_opt, sigma_opt, df_opt = result.x
+    log_lik_opt = -result.fun
+
+    if verbose:
+        print(f"  t-MLE-adaptive: {'✓ Converged' if result.success else '⚠ Did not converge'}")
+        print(f"  Final: θ={theta_opt:.4f}  μ={mu_opt:.4f}  σ={sigma_opt:.4f}  df*={df_opt:.2f}")
+
+    # Numerical Hessian — 4×4 but only use 3×3 block for OU parameter CIs
+    eps = 1e-5
+    params_opt = np.array([theta_opt, mu_opt, sigma_opt, df_opt])
+    f_center = neg_log_likelihood(params_opt)
+
+    def hessian_element(params, i, j):
+        if i == j:
+            p_plus  = params.copy(); p_plus[i]  += eps
+            p_minus = params.copy(); p_minus[i] -= eps
+            return (neg_log_likelihood(p_plus) - 2 * f_center
+                    + neg_log_likelihood(p_minus)) / eps ** 2
+        else:
+            p_pp = params.copy(); p_pp[i] += eps; p_pp[j] += eps
+            p_pm = params.copy(); p_pm[i] += eps; p_pm[j] -= eps
+            p_mp = params.copy(); p_mp[i] -= eps; p_mp[j] += eps
+            p_mm = params.copy(); p_mm[i] -= eps; p_mm[j] -= eps
+            return (neg_log_likelihood(p_pp) - neg_log_likelihood(p_pm)
+                    - neg_log_likelihood(p_mp) + neg_log_likelihood(p_mm)) / (4 * eps ** 2)
+
+    H = np.zeros((4, 4))
+    for i in range(4):
+        for j in range(4):
+            H[i, j] = hessian_element(params_opt, i, j)
+
+    try:
+        cov_matrix = np.linalg.inv(H)
+        std_errors = np.sqrt(np.abs(np.diag(cov_matrix)))[:3]   # θ, μ, σ only
+    except np.linalg.LinAlgError:
+        std_errors = np.array([theta_opt * 0.1, np.std(X) / np.sqrt(n), sigma_opt * 0.1])
+
+    z_95 = 1.96
+    theta_ci = (max(theta_opt - z_95 * std_errors[0], 0.001), theta_opt + z_95 * std_errors[0])
+    mu_ci    = (mu_opt    - z_95 * std_errors[1], mu_opt    + z_95 * std_errors[1])
+    sigma_ci = (max(sigma_opt - z_95 * std_errors[2], 0.001), sigma_opt + z_95 * std_errors[2])
+
+    return OUEstimationResult(
+        theta=theta_opt,
+        mu=mu_opt,
+        sigma=sigma_opt,
+        log_likelihood=log_lik_opt,
+        success=result.success,
+        message=f"df*={df_opt:.2f}  |  {result.message}",
+        theta_ci=theta_ci,
+        mu_ci=mu_ci,
+        sigma_ci=sigma_ci,
+    )
