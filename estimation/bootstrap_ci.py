@@ -399,6 +399,33 @@ def _sanity_check(df_mae: pd.DataFrame, csv_path: str):
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 
+def save_raw_errors(methods: dict, n_paths: int, out_path: str):
+    """
+    Collect per-path absolute errors for all jump rates and save to CSV.
+    Used by robustness_visualization.py for violin plot Figure 3.
+    CSV columns: jump_rate, path_idx, method, theta_err, sigma_err
+    Rows where a method failed on a path are omitted.
+    """
+    rows = []
+    for jump_rate in JUMP_RATES:
+        pct = int(jump_rate * 100)
+        print(f"  Collecting raw errors — jump rate {pct}% ...", flush=True)
+        path_results = collect_raw_errors(
+            methods=methods,
+            theta_true=TRUE_THETA, sigma_true=TRUE_SIGMA,
+            jump_rate=jump_rate, n_paths=n_paths,
+        )
+        for i, record in enumerate(path_results):
+            for method, errs in record.items():
+                rows.append(dict(
+                    jump_rate=jump_rate, path_idx=i, method=method,
+                    theta_err=errs['theta'], sigma_err=errs['sigma'],
+                ))
+    df = pd.DataFrame(rows)
+    df.to_csv(out_path, index=False)
+    print(f"Saved: {out_path}  ({len(df)} rows)", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Bootstrap CIs on MAE and MAE differences for OU robustness experiment'
@@ -411,6 +438,12 @@ def main():
                         help='Path to LSTM-v1 .pt file')
     parser.add_argument('--model-robust', type=str, default=DEFAULT_MODEL_ROBUST_PATH,
                         help='Path to LSTM-v2-robust .pt file')
+    parser.add_argument('--save-raw', action='store_true',
+                        help='Also save per-path raw errors to bootstrap_raw_errors.csv '
+                             '(required for violin plots in robustness_visualization.py)')
+    parser.add_argument('--classical-only', action='store_true',
+                        help='With --save-raw: skip LSTM inference, collect only MLE / '
+                             't-MLE / t-MLE(df*) errors. Runs in ~15 min instead of hours.')
     args = parser.parse_args()
 
     if not os.path.exists(args.model):
@@ -447,6 +480,33 @@ def main():
 
     df_diff.to_csv(diff_path, index=False)
     print(f"Saved: {diff_path}")
+
+    # Optional: save raw per-path errors for violin plots (Fig 3)
+    if args.save_raw:
+        print("\nCollecting raw per-path errors for violin plots ...", flush=True)
+        if args.classical_only:
+            print("(--classical-only: skipping LSTM inference)", flush=True)
+            methods_raw = {
+                'MLE':        run_mle,
+                't-MLE':      run_t_mle,
+                't-MLE(df*)': run_t_mle_adaptive,
+            }
+        else:
+            from estimation.lstm_estimator import OULSTMEstimator
+            lstm_raw = OULSTMEstimator()
+            lstm_raw.load(args.model)
+            methods_raw = {
+                'MLE':        run_mle,
+                't-MLE':      run_t_mle,
+                't-MLE(df*)': run_t_mle_adaptive,
+                'LSTM':       lambda s: run_lstm(lstm_raw, s),
+            }
+            if args.model_robust and os.path.exists(args.model_robust):
+                lstm_robust_raw = OULSTMEstimator()
+                lstm_robust_raw.load(args.model_robust)
+                methods_raw['LSTM-robust'] = lambda s: run_lstm_robust(lstm_robust_raw, s)
+        raw_path = os.path.join(out_dir, 'bootstrap_raw_errors.csv')
+        save_raw_errors(methods_raw, n_paths=args.n_paths, out_path=raw_path)
 
 
 if __name__ == '__main__':

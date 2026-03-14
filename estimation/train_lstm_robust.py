@@ -207,6 +207,16 @@ def main():
     # Save model
     estimator.save(MODEL_PATH)
 
+    # Save loss history for training curve visualization (Fig 4)
+    loss_path = os.path.join(os.path.dirname(MODEL_PATH), 'lstm_v2_losses.csv')
+    import pandas as _pd
+    _pd.DataFrame({
+        'epoch':      range(1, len(history.train_losses) + 1),
+        'train_loss': history.train_losses,
+        'val_loss':   history.val_losses,
+    }).to_csv(loss_path, index=False)
+    print(f"Loss history saved to: {loss_path}")
+
     # Spot-check on clean path
     spot_check(estimator)
 
