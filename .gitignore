@@ -1,0 +1,52 @@
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ─── Virtual environments ─────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ─── Environment variables ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Claude Code (local/environment-specific) ─────────────────────────────────
+.claude/settings.local.json
+.claude/skills/
+
+# ─── Thesis drafts and archives (not source code) ─────────────────────────────
+*.pdf
+*.zip
+
+# ─── Root-level pipeline output artifacts (regeneratable) ─────────────────────
+# Keeps thesis result CSVs inside estimation/ and preprocessing/ untouched.
+/*.csv
+/*.png
+
+# ─── Preprocessing output images (regeneratable) ──────────────────────────────
+preprocessing/*.png
+
+# ─── Web app ──────────────────────────────────────────────────────────────────
+webapp/frontend/node_modules/
+webapp/frontend/dist/
+webapp/frontend/.env
+webapp/backend/.env
+webapp/backend/__pycache__/
+
+# ─── Database ─────────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
