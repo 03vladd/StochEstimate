@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "stochestimate-core"
+version = "0.1.0"
+description = "StochEstimate core — OU estimation, validation, and preprocessing modules"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["estimation*", "validation*", "preprocessing*", "synthetic_data*"]
+exclude = ["webapp*", ".venv*", "*.egg-info*"]

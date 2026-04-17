@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # ── Research DB (used by pipeline.py, robustness experiments) ──────────────
   stochestimate_db:
     image: postgres:16-alpine
     container_name: stochestimate_db
@@ -19,7 +19,25 @@ services:
       timeout: 5s
       retries: 5
 
-  # pgAdmin Web Interface
+  # ── App DB (used by the StochEstimate web application) ────────────────────
+  stochestimate_app_db:
+    image: postgres:16-alpine
+    container_name: stochestimate_app_db
+    environment:
+      POSTGRES_USER: stochestimate
+      POSTGRES_PASSWORD: stochestimate_dev
+      POSTGRES_DB: stochestimate_app
+    ports:
+      - "5433:5432"
+    volumes:
+      - stochestimate_app_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stochestimate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── pgAdmin (covers both databases) ───────────────────────────────────────
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: stochestimate_pgadmin
@@ -30,9 +48,11 @@ services:
       - "5050:80"
     depends_on:
       - stochestimate_db
+      - stochestimate_app_db
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
 volumes:
   stochestimate_db_data:
+  stochestimate_app_db_data:
   pgadmin_data:
