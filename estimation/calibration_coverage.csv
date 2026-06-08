@@ -1,0 +1,4 @@
+estimator,n,theta_coverage,mu_coverage,sigma_coverage
+MLE,500,0.926,0.83,0.924
+LSTM-v1,500,0.098,0.116,0.608
+LSTM-robust,500,0.1,0.2,0.614

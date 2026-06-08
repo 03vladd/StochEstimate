@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # Anthropic
     ANTHROPIC_API_KEY: str = ""
 
+    # Research code root (absolute path to the StochEstimate repo root)
+    RESEARCH_ROOT: str = "/mnt/c/Users/vasiu/UBB/Info/Licenta/StochEstimate"
+    LSTM_MODEL_PATH: str = "estimation/saved_models/ou_lstm_v2_robust.pt"
+
     # App
     APP_NAME: str = "StochEstimate"
     DEBUG: bool = True

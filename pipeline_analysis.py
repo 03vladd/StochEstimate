@@ -20,6 +20,10 @@ from estimation.backtesting import backtest_pairs_trading
 from preprocessing.validate_real_pairs import FinancialPairsFetcher
 from database.db_manager import DatabaseManager
 
+# Backtesting parameters — must match pipeline.py. Change both together if tuning.
+ENTRY_THRESHOLD = 1.5   # Enter trade when spread deviates by this many σ
+MAX_HOLDING_DAYS = 30   # Force-exit after this many days
+
 
 class Phase2Pipeline:
     """Phase 2: Full analysis on cointegrated pairs"""
@@ -120,8 +124,8 @@ class Phase2Pipeline:
                     mu=mle_result.mu,
                     sigma=mle_result.sigma,
                     pair_name=name,
-                    entry_threshold=1.5,
-                    max_holding_days=30
+                    entry_threshold=ENTRY_THRESHOLD,
+                    max_holding_days=MAX_HOLDING_DAYS
                 )
                 print(backtest_result.detailed_result)
 

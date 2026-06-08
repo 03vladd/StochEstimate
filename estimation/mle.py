@@ -6,16 +6,16 @@ using exact discrete likelihood formulation.
 
 Theory:
 For OU process: dX_t = theta(mu - X_t)dt + sigma dW_t
-Discrete observations at times t_0, t_1, ..., t_n with spacing dt:
+Given N+1 observations X_0, X_1, ..., X_N with spacing dt:
 
-X_{t+dt} | X_t ~ N(m_t, v_t)
+X_t | X_{t-1} ~ N(m_{t-1}, v_{t-1}),  t = 1, ..., N
 
 where:
-  m_t = mu + (X_t - mu)*exp(-theta*dt)          [conditional mean]
-  v_t = sigma^2/(2*theta) * (1 - exp(-2*theta*dt))  [conditional variance]
+  m_{t-1} = mu + (X_{t-1} - mu)*exp(-theta*dt)           [conditional mean]
+  v_{t-1} = sigma^2/(2*theta) * (1 - exp(-2*theta*dt))   [conditional variance]
 
-Log-likelihood:
-  log L = sum_i [ -0.5*log(v_i) - 0.5*(X_{i+1} - m_i)^2 / v_i ]
+Log-likelihood (thesis eq. 2.8, constant -N/2*log(2*pi) omitted):
+  ell = -1/2 * sum_{t=1}^{N} [ log(v_{t-1}) + (X_t - m_{t-1})^2 / v_{t-1} ]
 """
 
 import numpy as np
@@ -111,7 +111,8 @@ def estimate_ou_mle(
         if theta <= 0 or sigma <= 0:
             return 1e10  # Penalty for invalid parameters
 
-        # Compute conditional means and variances for each transition
+        # Compute m_{t-1} and v_{t-1} for each transition t = 1, ..., N
+        # (array index i corresponds to t-1, so i runs 0 .. N-1)
         means = np.zeros(n - 1)
         variances = np.zeros(n - 1)
 
@@ -119,13 +120,12 @@ def estimate_ou_mle(
             dt_i = dt[i]
             exp_neg_theta_dt = np.exp(-theta * dt_i)
 
-            # Conditional mean: m_t = mu + (X_t - mu)*exp(-theta*dt)
+            # m_{t-1} = mu + (X_{t-1} - mu)*exp(-theta*dt)
             means[i] = mu + (X[i] - mu) * exp_neg_theta_dt
 
-            # Conditional variance: v_t = sigma^2/(2*theta) * (1 - exp(-2*theta*dt))
-            # Handle numerical issues when theta is very small
+            # v_{t-1} = sigma^2/(2*theta) * (1 - exp(-2*theta*dt))
             if theta < 1e-4:
-                # Use Taylor expansion: 1 - exp(-2*theta*dt) ≈ 2*theta*dt
+                # Taylor expansion: 1 - exp(-2*theta*dt) ≈ 2*theta*dt
                 variances[i] = sigma ** 2 * dt_i
             else:
                 exp_neg_2theta_dt = np.exp(-2 * theta * dt_i)
@@ -135,9 +135,8 @@ def estimate_ou_mle(
         if np.any(variances <= 0):
             return 1e10
 
-        # Compute log-likelihood
-        # log L = sum_i [ -0.5*log(v_i) - 0.5*(X_{i+1} - m_i)^2 / v_i ]
-        residuals = X[1:] - means
+        # ell = -1/2 * sum_{t=1}^{N} [ log(v_{t-1}) + (X_t - m_{t-1})^2 / v_{t-1} ]
+        residuals = X[1:] - means  # X_t - m_{t-1}
         log_likelihood = -0.5 * np.sum(np.log(variances)) - 0.5 * np.sum((residuals ** 2) / variances)
 
         return -log_likelihood  # Negative because we minimize

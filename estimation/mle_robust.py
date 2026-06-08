@@ -3,12 +3,12 @@ Robust MLE for Ornstein-Uhlenbeck process — Student-t conditional likelihood
 
 Replaces the Gaussian conditional density in standard OU-MLE with a Student-t:
 
-  X_{t+dt} | X_t  ~  t_ν( location = m_t,  scale = sqrt(v_t) )
+  X_t | X_{t-1}  ~  t_ν( location = m_{t-1},  scale = sqrt(v_{t-1}) )
 
-where m_t and v_t are the exact OU conditional moments (same as Gaussian MLE):
+where m_{t-1} and v_{t-1} are the exact OU conditional moments (same as Gaussian MLE):
 
-  m_t = μ + (X_t − μ) · exp(−θ·Δt)
-  v_t = σ²/(2θ) · (1 − exp(−2θ·Δt))
+  m_{t-1} = μ + (X_{t-1} − μ) · exp(−θ·Δt)
+  v_{t-1} = σ²/(2θ) · (1 − exp(−2θ·Δt))
 
 This downweights large residuals relative to the Gaussian quadratic penalty:
   Gaussian:   penalty ∝  r²/v
@@ -91,24 +91,24 @@ def estimate_ou_t_mle(
 
         nll = 0.0
         for i in range(n - 1):
+            # array index i corresponds to t-1 in thesis notation
             dt_i = dt[i]
             exp_neg_theta_dt = np.exp(-theta * dt_i)
 
-            # Exact OU conditional mean
-            m_i = mu + (X[i] - mu) * exp_neg_theta_dt
+            # m_{t-1} = mu + (X_{t-1} - mu)*exp(-theta*dt)
+            m_prev = mu + (X[i] - mu) * exp_neg_theta_dt
 
-            # Exact OU conditional variance
+            # v_{t-1} = sigma^2/(2*theta) * (1 - exp(-2*theta*dt))
             if theta < 1e-4:
-                v_i = sigma ** 2 * dt_i          # Taylor expansion
+                v_prev = sigma ** 2 * dt_i          # Taylor expansion
             else:
-                v_i = (sigma ** 2 / (2 * theta)) * (1 - np.exp(-2 * theta * dt_i))
+                v_prev = (sigma ** 2 / (2 * theta)) * (1 - np.exp(-2 * theta * dt_i))
 
-            if v_i <= 0:
+            if v_prev <= 0:
                 return 1e10
 
-            # Student-t log-likelihood: t_ν(location=m_i, scale=sqrt(v_i))
-            # scipy.stats.t.logpdf(x, df, loc, scale)
-            nll -= t_dist.logpdf(X[i + 1], df=df, loc=m_i, scale=np.sqrt(v_i))
+            # t_ν(location=m_{t-1}, scale=sqrt(v_{t-1})) evaluated at X_t
+            nll -= t_dist.logpdf(X[i + 1], df=df, loc=m_prev, scale=np.sqrt(v_prev))
 
         return nll
 
@@ -220,20 +220,24 @@ def estimate_ou_t_mle_adaptive(
 
         nll = 0.0
         for i in range(n - 1):
+            # array index i corresponds to t-1 in thesis notation
             dt_i = dt[i]
             exp_neg_theta_dt = np.exp(-theta * dt_i)
 
-            m_i = mu + (X[i] - mu) * exp_neg_theta_dt
+            # m_{t-1} = mu + (X_{t-1} - mu)*exp(-theta*dt)
+            m_prev = mu + (X[i] - mu) * exp_neg_theta_dt
 
+            # v_{t-1} = sigma^2/(2*theta) * (1 - exp(-2*theta*dt))
             if theta < 1e-4:
-                v_i = sigma ** 2 * dt_i
+                v_prev = sigma ** 2 * dt_i
             else:
-                v_i = (sigma ** 2 / (2 * theta)) * (1 - np.exp(-2 * theta * dt_i))
+                v_prev = (sigma ** 2 / (2 * theta)) * (1 - np.exp(-2 * theta * dt_i))
 
-            if v_i <= 0:
+            if v_prev <= 0:
                 return 1e10
 
-            nll -= t_dist.logpdf(X[i + 1], df=df, loc=m_i, scale=np.sqrt(v_i))
+            # t_ν(location=m_{t-1}, scale=sqrt(v_{t-1})) evaluated at X_t
+            nll -= t_dist.logpdf(X[i + 1], df=df, loc=m_prev, scale=np.sqrt(v_prev))
 
         return nll
 

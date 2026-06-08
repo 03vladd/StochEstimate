@@ -33,8 +33,8 @@ class BacktestResult:
     theta: float
     mu: float
     sigma: float
-
     trades: List[Trade]
+    strategy_type: str = 'fixed'  # 'fixed' here; 'adaptive' in backtesting_adapted.py
 
     @property
     def num_trades(self) -> int:

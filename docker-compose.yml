@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ── Research DB (used by pipeline.py, robustness experiments) ──────────────
   stochestimate_db:
@@ -25,6 +23,7 @@ services:
     container_name: stochestimate_app_db
     environment:
       POSTGRES_USER: stochestimate
+
       POSTGRES_PASSWORD: stochestimate_dev
       POSTGRES_DB: stochestimate_app
     ports:

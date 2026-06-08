@@ -3,6 +3,8 @@ Database manager for StochEstimate
 Handles all connections and CRUD operations for the PostgreSQL database
 """
 
+import os
+
 from psycopg2 import pool
 import psycopg2
 from typing import Optional, List, Dict, Tuple
@@ -12,9 +14,9 @@ from datetime import datetime
 class DatabaseManager:
     """Manages PostgreSQL connections and database operations"""
 
-    def __init__(self, host: str = 'localhost', port: int = 5432,
-                 database: str = 'stochestimate', user: str = 'stochestimate',
-                 password: str = 'stochestimate_dev', min_connections: int = 2,
+    def __init__(self, host: str = None, port: int = None,
+                 database: str = None, user: str = None,
+                 password: str = None, min_connections: int = 2,
                  max_connections: int = 5):
         """
         Initialize database manager with connection pool
@@ -29,6 +31,13 @@ class DatabaseManager:
             max_connections: Maximum connections allowed in pool
         """
         try:
+            # Resolve credentials: explicit args > env vars > defaults
+            host     = host     or os.environ.get('DB_HOST',     'localhost')
+            port     = port     or int(os.environ.get('DB_PORT', '5432'))
+            database = database or os.environ.get('DB_NAME',     'stochestimate')
+            user     = user     or os.environ.get('DB_USER',     'stochestimate')
+            password = password or os.environ.get('DB_PASSWORD', 'stochestimate_dev')
+
             # Create a connection pool (reusable connections)
             self.connection_pool = pool.SimpleConnectionPool(
                 min_connections,
@@ -332,14 +341,14 @@ class DatabaseManager:
             INSERT INTO lstm_models
             (interval, validation_criteria, model_filename,
              training_pairs_count, training_data_points_used,
-             mae_validation_loss, rmse_validation_loss, version)
+             mae_theta, rmse_theta, version)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (interval, validation_criteria, version)
             DO UPDATE SET
                 model_filename            = EXCLUDED.model_filename,
                 training_data_points_used = EXCLUDED.training_data_points_used,
-                mae_validation_loss       = EXCLUDED.mae_validation_loss,
-                rmse_validation_loss      = EXCLUDED.rmse_validation_loss,
+                mae_theta                 = EXCLUDED.mae_theta,
+                rmse_theta                = EXCLUDED.rmse_theta,
                 created_at                = CURRENT_TIMESTAMP
             RETURNING model_id
         """

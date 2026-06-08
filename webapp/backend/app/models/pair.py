@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Boolean, Float, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import String, Boolean, Float, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -17,6 +17,7 @@ class Pair(Base):
     ticker1: Mapped[str] = mapped_column(String(20), nullable=False)
     ticker2: Mapped[str] = mapped_column(String(20), nullable=False)
     sector: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    narration: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (UniqueConstraint("ticker1", "ticker2", name="uq_pairs_tickers"),)

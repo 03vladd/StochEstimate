@@ -4,6 +4,8 @@ Initialize PostgreSQL schema for StochEstimate
 Creates all 5 tables with proper relationships and constraints
 """
 
+import os
+
 import psycopg2
 from psycopg2 import sql
 
@@ -11,13 +13,13 @@ from psycopg2 import sql
 def create_schema():
     """Create all tables in the database"""
 
-    # Connect to PostgreSQL
+    # Connect to PostgreSQL — credentials resolved from env vars with fallback defaults
     conn = psycopg2.connect(
-        host="localhost",
-        port=5432,
-        database="stochestimate",
-        user="stochestimate",
-        password="stochestimate_dev"
+        host=os.environ.get('DB_HOST',     'localhost'),
+        port=int(os.environ.get('DB_PORT', '5432')),
+        database=os.environ.get('DB_NAME', 'stochestimate'),
+        user=os.environ.get('DB_USER',     'stochestimate'),
+        password=os.environ.get('DB_PASSWORD', 'stochestimate_dev')
     )
 
     cursor = conn.cursor()
@@ -111,8 +113,8 @@ def create_schema():
             model_filename VARCHAR(255) NOT NULL,
             training_pairs_count INTEGER NOT NULL,
             training_data_points_used INTEGER NOT NULL,
-            mae_validation_loss NUMERIC,
-            rmse_validation_loss NUMERIC,
+            mae_theta NUMERIC,   -- MAE on θ from test-set evaluation (not training loss)
+            rmse_theta NUMERIC,  -- RMSE on θ from test-set evaluation
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             version INTEGER NOT NULL,
             UNIQUE(interval, validation_criteria, version)

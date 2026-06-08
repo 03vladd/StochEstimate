@@ -23,6 +23,11 @@ from preprocessing.validate_real_pairs import FinancialPairsFetcher
 from database.db_manager import DatabaseManager
 from estimation.lstm_estimator import OULSTMEstimator
 
+# Backtesting parameters — defined once here so pipeline.py and pipeline_analysis.py
+# stay in sync. Change these together if tuning the strategy.
+ENTRY_THRESHOLD = 1.5   # Enter trade when spread deviates by this many σ
+MAX_HOLDING_DAYS = 30   # Force-exit after this many days
+
 
 def extract_validation_data(report) -> dict:
     """Extract validation statistics for database storage"""
@@ -297,8 +302,8 @@ class HybridPipeline:
                     mu=mle_result.mu,
                     sigma=mle_result.sigma,
                     pair_name=name,
-                    entry_threshold=1.5,
-                    max_holding_days=30
+                    entry_threshold=ENTRY_THRESHOLD,
+                    max_holding_days=MAX_HOLDING_DAYS
                 )
                 print(backtest_result.detailed_result)
 
@@ -320,8 +325,8 @@ class HybridPipeline:
     def _print_estimation_comparison(self, pair_name: str, mle_result, lstm_result):
         """Print side-by-side comparison table of MLE vs LSTM estimates"""
         sep = "\u2500" * 100
-        mle_half = f"{1 / mle_result.theta:.1f}" if mle_result.theta > 0 else "N/A"
-        lstm_half = f"{0.693147 / lstm_result.theta:.1f}" if lstm_result.theta > 0 else "N/A"
+        mle_half = f"{np.log(2) / mle_result.theta:.1f}" if mle_result.theta > 0 else "N/A"
+        lstm_half = f"{np.log(2) / lstm_result.theta:.1f}" if lstm_result.theta > 0 else "N/A"
 
         print(f"\nPARAMETER ESTIMATION COMPARISON: {pair_name}")
         print(sep)

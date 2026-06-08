@@ -1,0 +1,25 @@
+pair,sector,cointegrated,confidence,tests_passed,stationarity,drift,volatility,acf,acf_r2,acf_theta,n_obs
+Dominion / Southern Company,Utilities,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Xcel / WEC Energy,Utilities,True,LOW,2,True,False,False,True,0.9952951304763595,0.020829744390932384,1254
+ConEd / Edison International,Utilities,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+AEP / Entergy,Utilities,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+DTE Energy / PPL,Utilities,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Chevron / ExxonMobil,Energy,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+ConocoPhillips / EOG,Energy,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Occidental / Devon,Energy,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Coca-Cola / PepsiCo,Consumer Staples,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+P&G / Colgate,Consumer Staples,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Kimberly-Clark / Clorox,Consumer Staples,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Costco / Walmart,Consumer Staples,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Newmont / Barrick Gold,Materials,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Agnico Eagle / Wheaton,Materials,True,LOW,2,True,False,False,True,0.9949306533280696,0.01978848482583886,1254
+Verizon / AT&T,Telecom,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Bank of America / Wells Fargo,Banking,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Citigroup / BofA,Banking,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Morgan Stanley / Goldman Sachs,Banking,True,LOW,2,True,False,False,True,0.9994402240679965,0.023771725522646496,1254
+Allstate / Travelers,Insurance,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+MetLife / Prudential,Insurance,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Realty Income / NNN,REIT,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Simon Property / Macerich,REIT,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+J&J / Abbott,Healthcare,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
+Medtronic / Boston Scientific,Healthcare,False,NOT_COINTEGRATED,0,False,False,False,False,,,0
